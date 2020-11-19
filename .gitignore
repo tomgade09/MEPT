@@ -1,0 +1,68 @@
+# Compiled Object files
+*.slo
+*.lo
+*.o
+*.obj
+
+# Precompiled Headers
+*.gch
+*.pch
+
+# Compiled Dynamic libraries
+*.so
+*.dylib
+*.dll
+
+# Python Compiled Files
+*.pyc
+
+# Fortran module files
+*.mod
+*.smod
+
+# Compiled Static libraries
+*.lai
+*.la
+*.a
+*.lib
+*.cu.deps
+
+# Executables
+*.exe
+*.out
+*.app
+
+# Other Miscellanies + vb nonsense
+*.tmp
+*.nogit
+*.csv
+*.bak
+*.old
+*.opendb
+*.db
+*.pdb
+# *.sln
+# *.vcxproj
+#*.filters
+*.user
+*.gitattributes
+*.snip
+*.bin
+*.log
+addrules
+
+# Project-specific folders
+build/
+Debug/
+Release/
+x64/
+.vs/
+.vscode/
+bin/
+lib/
+_*/
+# utils/BinToCDF/
+.idea/
+
+# Exceptions
+!tests/data/*.bin

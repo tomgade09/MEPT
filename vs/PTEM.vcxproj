@@ -1,0 +1,202 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|x64">
+      <Configuration>Debug</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|x64">
+      <Configuration>Release</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\src\BField\DipoleB.cpp" />
+    <ClCompile Include="..\src\BField\DipoleBLUT.cpp" />
+    <ClCompile Include="..\src\EField\EField.cpp" />
+    <ClCompile Include="..\src\EField\QSPS.cpp" />
+    <ClCompile Include="..\src\Log\Log.cpp" />
+    <ClCompile Include="..\src\main.cpp" />
+    <ClCompile Include="..\src\Particles\Particles.cpp" />
+    <ClCompile Include="..\src\Satellite\Satellite.cpp" />
+    <ClCompile Include="..\src\Satellite\Detector.cpp" />
+    <ClCompile Include="..\src\Simulation\iterateSimCPU.cpp" />
+    <ClCompile Include="..\src\Simulation\Simulation.cpp" />
+    <ClCompile Include="..\src\utils\fileIO.cpp" />
+    <ClCompile Include="..\src\utils\readIOclasses.cpp" />
+    <ClCompile Include="..\src\utils\serializationHelpers.cpp" />
+    <ClCompile Include="..\src\utils\strings.cpp" />
+    <ClCompile Include="..\src\utils\numerical.cpp" />
+    <ClCompile Include="..\src\utils\random.cpp" />
+    <ClCompile Include="..\src\utils\writeIOclasses.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\include\BField\allBModels.h" />
+    <ClInclude Include="..\include\BField\BModel.h" />
+    <ClInclude Include="..\include\BField\DipoleB.h" />
+    <ClInclude Include="..\include\BField\DipoleBLUT.h" />
+    <ClInclude Include="..\include\dlldefines.h" />
+    <ClInclude Include="..\include\EField\allEModels.h" />
+    <ClInclude Include="..\include\EField\EModel.h" />
+    <ClInclude Include="..\include\EField\EField.h" />
+    <ClInclude Include="..\include\EField\QSPS.h" />
+    <ClInclude Include="..\include\equalityOperators.h" />
+    <ClInclude Include="..\include\ErrorHandling\cudaDeviceMacros.h" />
+    <ClInclude Include="..\include\ErrorHandling\cudaErrorCheck.h" />
+    <ClInclude Include="..\include\ErrorHandling\simExceptionMacros.h" />
+    <ClInclude Include="..\include\Log\Log.h" />
+    <ClInclude Include="..\include\Particles\Particles.h" />
+    <ClInclude Include="..\include\physicalconstants.h" />
+    <ClInclude Include="..\include\Satellite\Satellite.h" />
+    <ClInclude Include="..\include\Simulation\Environment.h" />
+    <ClInclude Include="..\include\Simulation\Simulation.h" />
+    <ClInclude Include="..\include\utils\arrayUtilsGPU.h" />
+    <ClInclude Include="..\include\utils\fileIO.h" />
+    <ClInclude Include="..\include\utils\readIOclasses.h" />
+    <ClInclude Include="..\include\utils\serializationHelpers.h" />
+    <ClInclude Include="..\include\utils\silenceStreamMacros.h" />
+    <ClInclude Include="..\include\utils\strings.h" />
+    <ClInclude Include="..\include\utils\loopmacros.h" />
+    <ClInclude Include="..\include\utils\numerical.h" />
+    <ClInclude Include="..\include\utils\random.h" />
+    <ClInclude Include="..\include\utils\unitsTypedefs.h" />
+    <ClInclude Include="..\include\utils\writeIOclasses.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <CudaCompile Include="..\src\BField\BModel.cu" />
+    <CudaCompile Include="..\src\BField\DipoleB.cu" />
+    <CudaCompile Include="..\src\BField\DipoleBLUT.cu" />
+    <CudaCompile Include="..\src\EField\EModel.cu" />
+    <CudaCompile Include="..\src\EField\EField.cu" />
+    <CudaCompile Include="..\src\EField\QSPS.cu" />
+    <CudaCompile Include="..\src\Satellite\Detector.cu" />
+    <CudaCompile Include="..\src\Simulation\Environment.cu" />
+    <CudaCompile Include="..\src\Simulation\simulationphysics.cu" />
+    <CudaCompile Include="..\src\utils\arrayUtilsGPU.cu" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="..\docs\BField\README.md" />
+    <None Include="..\docs\EField\README.md" />
+    <None Include="..\docs\ErrorHandling\README.md" />
+    <None Include="..\docs\Particles\README.md" />
+    <None Include="..\docs\README.md" />
+    <None Include="..\docs\Satellite\README.md" />
+    <None Include="..\docs\Simulation\README.md" />
+  </ItemGroup>
+  <ItemGroup>
+    <Image Include="..\docs\BField\Ownership.jpg" />
+    <Image Include="..\docs\EField\Ownership.jpg" />
+    <Image Include="..\docs\Particles\Particles.jpg" />
+    <Image Include="..\docs\Satellite\Ownership.jpg" />
+    <Image Include="..\docs\Simulation\Simulation.jpg" />
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <ProjectGuid>{F99C52E6-751A-42DA-8861-2CF5BBEB9E5D}</ProjectGuid>
+    <RootNamespace>_PTEM</RootNamespace>
+    <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
+    <ProjectName>PTEM</ProjectName>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseDebugLibraries>true</UseDebugLibraries>
+    <CharacterSet>MultiByte</CharacterSet>
+    <PlatformToolset>v142</PlatformToolset>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <WholeProgramOptimization>true</WholeProgramOptimization>
+    <CharacterSet>MultiByte</CharacterSet>
+    <PlatformToolset>v142</PlatformToolset>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <ImportGroup Label="ExtensionSettings">
+    <Import Project="$(VCTargetsPath)\BuildCustomizations\CUDA 11.1.props" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <PropertyGroup Label="UserMacros" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <LinkIncremental>true</LinkIncremental>
+    <IncludePath>$(SolutionDir)..\include;$(IncludePath)</IncludePath>
+    <LibraryPath>$(LibraryPath)</LibraryPath>
+    <OutDir>$(SolutionDir)..\bin\</OutDir>
+    <TargetName>$(ProjectName)_d</TargetName>
+    <CodeAnalysisRuleSet>C:\Program Files (x86)\Microsoft Visual Studio 14.0\Team Tools\Static Analysis Tools\Rule Sets\NativeRecommendedRules.ruleset</CodeAnalysisRuleSet>
+    <RunCodeAnalysis>false</RunCodeAnalysis>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <IncludePath>$(SolutionDir)..\include;$(IncludePath)</IncludePath>
+    <LibraryPath>$(LibraryPath)</LibraryPath>
+    <OutDir>$(SolutionDir)..\bin\</OutDir>
+    <CodeAnalysisRuleSet>C:\Program Files (x86)\Microsoft Visual Studio 14.0\Team Tools\Static Analysis Tools\Rule Sets\NativeRecommendedRules.ruleset</CodeAnalysisRuleSet>
+    <RunCodeAnalysis>false</RunCodeAnalysis>
+  </PropertyGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <Optimization>Disabled</Optimization>
+      <PreprocessorDefinitions>WIN32;WIN64;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <EnablePREfast>false</EnablePREfast>
+      <LanguageStandard>stdcpp17</LanguageStandard>
+    </ClCompile>
+    <Link>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <SubSystem>Console</SubSystem>
+      <AdditionalDependencies>cudart.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>$(SolutionDir)..\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+    </Link>
+    <PostBuildEvent>
+      <Command>echo copy "$(CudaToolkitBinDir)\cudart*.dll" "$(OutDir)"
+copy "$(CudaToolkitBinDir)\cudart*.dll" "$(OutDir)"</Command>
+    </PostBuildEvent>
+    <CudaCompile>
+      <TargetMachinePlatform>64</TargetMachinePlatform>
+      <CodeGeneration>compute_50,sm_50</CodeGeneration>
+      <AdditionalOptions>-gencode=arch=compute_50,code=\"sm_50,compute_50\" </AdditionalOptions>
+      <GenerateRelocatableDeviceCode>true</GenerateRelocatableDeviceCode>
+    </CudaCompile>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <Optimization>MaxSpeed</Optimization>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <PreprocessorDefinitions>DLLFILE;WIN32;WIN64;NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <EnablePREfast>false</EnablePREfast>
+      <OpenMPSupport>true</OpenMPSupport>
+      <LanguageStandard>stdcpp17</LanguageStandard>
+    </ClCompile>
+    <Link>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
+      <OptimizeReferences>true</OptimizeReferences>
+      <SubSystem>Console</SubSystem>
+      <AdditionalDependencies>cudart.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>$(SolutionDir)..\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+    </Link>
+    <PostBuildEvent>
+      <Command>echo copy "$(CudaToolkitBinDir)\cudart*.dll" "$(OutDir)"
+copy "$(CudaToolkitBinDir)\cudart*.dll" "$(OutDir)"</Command>
+    </PostBuildEvent>
+    <CudaCompile>
+      <TargetMachinePlatform>64</TargetMachinePlatform>
+      <CodeGeneration>compute_50,sm_50</CodeGeneration>
+      <AdditionalOptions>-gencode=arch=compute_50,code=\"sm_50,compute_50\" </AdditionalOptions>
+      <GenerateRelocatableDeviceCode>true</GenerateRelocatableDeviceCode>
+      <FastMath>false</FastMath>
+    </CudaCompile>
+  </ItemDefinitionGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <ImportGroup Label="ExtensionTargets">
+    <Import Project="$(VCTargetsPath)\BuildCustomizations\CUDA 11.1.targets" />
+  </ImportGroup>
+</Project>

@@ -1,0 +1,435 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <CudaCompile Include="..\src\BField\DipoleB.cu">
+      <Filter>Source Files\BField</Filter>
+    </CudaCompile>
+    <CudaCompile Include="..\src\EField\EField.cu">
+      <Filter>Source Files\EField</Filter>
+    </CudaCompile>
+    <CudaCompile Include="..\src\EField\QSPS.cu">
+      <Filter>Source Files\EField</Filter>
+    </CudaCompile>
+    <CudaCompile Include="..\src\BField\DipoleBLUT.cu">
+      <Filter>Source Files\BField</Filter>
+    </CudaCompile>
+    <CudaCompile Include="..\src\Simulation\simulationphysics.cu">
+      <Filter>Source Files\Simulation</Filter>
+    </CudaCompile>
+    <CudaCompile Include="..\src\Simulation\Environment.cu">
+      <Filter>Source Files\Simulation</Filter>
+    </CudaCompile>
+    <CudaCompile Include="..\src\utils\arrayUtilsGPU.cu">
+      <Filter>Source Files\utils</Filter>
+    </CudaCompile>
+    <CudaCompile Include="..\src\Satellite\Detector.cu">
+      <Filter>Source Files\Satellite</Filter>
+    </CudaCompile>
+    <CudaCompile Include="..\src\BField\BField.cu">
+      <Filter>Source Files\BField</Filter>
+    </CudaCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\src\LogFile\LogFile.cpp">
+      <Filter>Source Files\LogFile</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\utils\numerical.cpp">
+      <Filter>Source Files\utils</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\utils\random.cpp">
+      <Filter>Source Files\utils</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\SimAttributes\SimAttributes.cpp">
+      <Filter>Source Files\SimAttributes</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\API\LogFileAPI.cpp">
+      <Filter>Source Files\API</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\API\SimulationAPI.cpp">
+      <Filter>Source Files\API</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\Simulation\previousSimulation.cpp">
+      <Filter>Source Files\Simulation</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\Simulation\Simulation.cpp">
+      <Filter>Source Files\Simulation</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\API\utilsAPI.cpp">
+      <Filter>Source Files\API</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\utils\readIOclasses.cpp">
+      <Filter>Source Files\utils\IO</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\utils\fileIO.cpp">
+      <Filter>Source Files\utils\IO</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\utils\writeIOclasses.cpp">
+      <Filter>Source Files\utils\IO</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\Satellite\Satellite.cpp">
+      <Filter>Source Files\Satellite</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\ionosphere\ionosphere.cpp">
+      <Filter>Source Files\ionosphere</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\ionosphere\ionosphereClasses.cpp">
+      <Filter>Source Files\ionosphere</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\Simulation\iterateSimCPU.cpp">
+      <Filter>Source Files\Simulation</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\utils\serializationHelpers.cpp">
+      <Filter>Source Files\utils\IO</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\Particle\Particle.cpp">
+      <Filter>Source Files\Particle</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\Satellite\Detector.cpp">
+      <Filter>Source Files\Satellite</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\utils\strings.cpp">
+      <Filter>Source Files\utils</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\BField\DipoleB.cpp">
+      <Filter>Source Files\BField</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\BField\DipoleBLUT.cpp">
+      <Filter>Source Files\BField</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\EField\QSPS.cpp">
+      <Filter>Source Files\EField</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\EField\EField.cpp">
+      <Filter>Source Files\EField</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\include\physicalconstants.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\BField\BField.h">
+      <Filter>Header Files\BField</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\BField\DipoleB.h">
+      <Filter>Header Files\BField</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\LogFile\LogFile.h">
+      <Filter>Header Files\LogFile</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\EField\EField.h">
+      <Filter>Header Files\EField</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\ErrorHandling\cudaErrorCheck.h">
+      <Filter>Header Files\ErrorHandling</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\ErrorHandling\SimException.h">
+      <Filter>Header Files\ErrorHandling</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\ErrorHandling\simExceptionMacros.h">
+      <Filter>Header Files\ErrorHandling</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\ErrorHandling\SimFatalException.h">
+      <Filter>Header Files\ErrorHandling</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\EField\QSPS.h">
+      <Filter>Header Files\EField</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\EField\allEModels.h">
+      <Filter>Header Files\EField</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\BField\allBModels.h">
+      <Filter>Header Files\BField</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\BField\DipoleBLUT.h">
+      <Filter>Header Files\BField</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\utils\numerical.h">
+      <Filter>Header Files\utils</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\utils\random.h">
+      <Filter>Header Files\utils</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\ErrorHandling\cudaDeviceMacros.h">
+      <Filter>Header Files\ErrorHandling</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\SimAttributes\SimAttributes.h">
+      <Filter>Header Files\SimAttributes</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\dlldefines.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\API\LogFileAPI.h">
+      <Filter>Header Files\API</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\API\SimulationAPI.h">
+      <Filter>Header Files\API</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\Particle\Particle.h">
+      <Filter>Header Files\Particle</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\Satellite\Satellite.h">
+      <Filter>Header Files\Satellite</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\Simulation\Simulation.h">
+      <Filter>Header Files\Simulation</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\API\utilsAPI.h">
+      <Filter>Header Files\API</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\equalityOperators.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\utils\fileIO.h">
+      <Filter>Header Files\utils\IO</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\utils\writeIOclasses.h">
+      <Filter>Header Files\utils\IO</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\utils\readIOclasses.h">
+      <Filter>Header Files\utils\IO</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\utils\silenceStreamMacros.h">
+      <Filter>Header Files\utils\Macros</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\utils\loopmacros.h">
+      <Filter>Header Files\utils\Macros</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\ionosphere\ionosphere.h">
+      <Filter>Header Files\ionosphere</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\ionosphere\ionosphereClasses.h">
+      <Filter>Header Files\ionosphere</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\ionosphere\ionosphereUtils.h">
+      <Filter>Header Files\ionosphere</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\Simulation\Environment.h">
+      <Filter>Header Files\Simulation</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\utils\serializationHelpers.h">
+      <Filter>Header Files\utils\IO</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\utils\arrayUtilsGPU.h">
+      <Filter>Header Files\utils</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\utils\unitsTypedefs.h">
+      <Filter>Header Files\utils</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\utils\strings.h">
+      <Filter>Header Files\utils</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="..\python\__simulationvariables.py">
+      <Filter>Python Files</Filter>
+    </None>
+    <None Include="..\python\simulation.py">
+      <Filter>Python Files</Filter>
+    </None>
+    <None Include="..\python\scripts\loadPrevSimData.py">
+      <Filter>Python Files\Scripts</Filter>
+    </None>
+    <None Include="..\python\scripts\simFromInterpreter.py">
+      <Filter>Python Files\Scripts</Filter>
+    </None>
+    <None Include="..\python\FileIO\fileIO.py">
+      <Filter>Python Files\FileIO</Filter>
+    </None>
+    <None Include="..\python\SimulationClass\Simulation.py">
+      <Filter>Python Files\Simulation</Filter>
+    </None>
+    <None Include="..\python\SimulationClass\AlfvenLUT.py">
+      <Filter>Python Files\Simulation</Filter>
+    </None>
+    <None Include="..\python\SimulationClass\__plotParticles.py">
+      <Filter>Python Files\Simulation</Filter>
+    </None>
+    <None Include="..\python\SimulationClass\_Simulation.py">
+      <Filter>Python Files\Simulation</Filter>
+    </None>
+    <None Include="..\python\utils\createParticleDistribution.py">
+      <Filter>Python Files\utils</Filter>
+    </None>
+    <None Include="..\python\utils\utilsAPI.py">
+      <Filter>Python Files\utils</Filter>
+    </None>
+    <None Include="..\docs\README.md">
+      <Filter>Documentation</Filter>
+    </None>
+    <None Include="..\docs\Simulation\README.md">
+      <Filter>Documentation\Simulation</Filter>
+    </None>
+    <None Include="..\docs\Satellite\README.md">
+      <Filter>Documentation\Satellite</Filter>
+    </None>
+    <None Include="..\docs\ErrorHandling\README.md">
+      <Filter>Documentation\ErrorHandling</Filter>
+    </None>
+    <None Include="..\docs\BField\README.md">
+      <Filter>Documentation\BField</Filter>
+    </None>
+    <None Include="..\docs\EField\README.md">
+      <Filter>Documentation\EField</Filter>
+    </None>
+    <None Include="..\docs\Particle\README.md">
+      <Filter>Documentation\Particle</Filter>
+    </None>
+    <None Include="..\python\__setup.py">
+      <Filter>Python Files</Filter>
+    </None>
+    <None Include="..\python\utils\loadDistributions.py">
+      <Filter>Python Files\utils</Filter>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="Header Files">
+      <UniqueIdentifier>{f1a3072b-2885-4f51-a637-f21420ff9cb0}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Python Files">
+      <UniqueIdentifier>{e2a48867-6cdf-402e-aa34-e0a75a1dec44}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files">
+      <UniqueIdentifier>{f6669d6b-cde1-418e-92c5-3cd63184a770}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\BField">
+      <UniqueIdentifier>{ba659dad-a628-4300-924e-e492427f860d}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\LogFile">
+      <UniqueIdentifier>{cf1f2022-4a66-4e24-8c8e-2c7bb92d6264}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\Satellite">
+      <UniqueIdentifier>{5b6c793a-800a-41a3-8fa6-3c6535b1af47}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\Particle">
+      <UniqueIdentifier>{84b230f3-9fbf-436d-9b04-b5cd37ee6fdc}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\EField">
+      <UniqueIdentifier>{523d7121-b52c-4601-81f2-a5ba317588d5}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\BField">
+      <UniqueIdentifier>{01bb1a25-1a1b-45c1-a9fa-8021922d0424}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\EField">
+      <UniqueIdentifier>{0fdaec53-8f12-47b3-b3ed-858680093151}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\LogFile">
+      <UniqueIdentifier>{6d5cdd2f-af6b-4d89-9818-df241cdb4ea2}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\Particle">
+      <UniqueIdentifier>{f082d824-4f6c-4e35-9272-e3931f9c9df2}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\Simulation">
+      <UniqueIdentifier>{36fedd8d-4452-445f-ba98-9d41dfa68bcc}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\Satellite">
+      <UniqueIdentifier>{3dd4282a-5a36-49af-8dcc-c9e611987447}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\Simulation">
+      <UniqueIdentifier>{924029cb-e739-45ec-aaf1-d217d6c76583}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Python Files\Scripts">
+      <UniqueIdentifier>{1a0a30fe-50df-4458-a643-efa38e910a71}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Python Files\FileIO">
+      <UniqueIdentifier>{ec41d45f-9c8f-4821-9ce1-862dd6e6864b}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Python Files\Simulation">
+      <UniqueIdentifier>{ae4bb753-1e6f-49fc-bb21-c7af59e356b1}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\ErrorHandling">
+      <UniqueIdentifier>{64f89fb8-0de4-4577-be61-c1b8fac0a175}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\utils">
+      <UniqueIdentifier>{b7d6010c-2433-4168-9947-b5d1a46fdec1}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\utils">
+      <UniqueIdentifier>{6ee7cffb-7aa9-4938-ad52-b8ae24313940}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Python Files\utils">
+      <UniqueIdentifier>{4867c70b-910f-44e6-9722-5c6c9cc82b9f}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\SimAttributes">
+      <UniqueIdentifier>{44059e51-f061-48eb-8602-b28f335fa151}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\SimAttributes">
+      <UniqueIdentifier>{3a2e37d9-9e12-47e3-a7ec-78a4b77075f7}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\API">
+      <UniqueIdentifier>{378b2f1b-b363-4fb8-8b0b-c76bcede227b}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\API">
+      <UniqueIdentifier>{9b515100-4d51-4a52-8fac-9b41a9a694d4}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Documentation">
+      <UniqueIdentifier>{c30b78ab-dd62-4828-952e-976326a71c46}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Documentation\API">
+      <UniqueIdentifier>{039274ad-dc12-4330-87d7-8771025698a7}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Documentation\BField">
+      <UniqueIdentifier>{021b8966-86a9-4e77-b311-9e9758cc3920}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Documentation\EField">
+      <UniqueIdentifier>{867f9727-895e-467c-8248-4af560a0e299}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Documentation\ErrorHandling">
+      <UniqueIdentifier>{29fc995d-07f0-41ce-82ee-ab736fcfb362}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Documentation\Examples">
+      <UniqueIdentifier>{06fb6f66-73b5-4643-a676-69425dce363f}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Documentation\LogFile">
+      <UniqueIdentifier>{9983e1b8-28c0-47c9-b2ec-1cf18fcec318}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Documentation\Particle">
+      <UniqueIdentifier>{17ef3db8-a974-44ea-a3b3-1df7534570f1}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Documentation\Satellite">
+      <UniqueIdentifier>{e7e19a3b-61d3-4fc8-adda-f94ead151877}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Documentation\SimAttributes">
+      <UniqueIdentifier>{a6633b87-a85c-4dc5-9a3e-792af0d92831}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Documentation\Simulation">
+      <UniqueIdentifier>{84df892f-3276-4d98-8f10-471d168a955d}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Documentation\utils">
+      <UniqueIdentifier>{a83d7d31-1543-4a79-b77b-76915accceac}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\utils\IO">
+      <UniqueIdentifier>{a08eb9bf-ee6d-47fe-936f-e6fed7e0cb6e}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\utils\Macros">
+      <UniqueIdentifier>{dbb49a59-887a-4a30-af2e-2ff4298c2883}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\utils\IO">
+      <UniqueIdentifier>{5b674949-5f2f-490e-894a-84d3b0cce31d}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Python Files\examples">
+      <UniqueIdentifier>{ad8e9691-1bbf-4511-b99b-be83a59f24f2}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\ionosphere">
+      <UniqueIdentifier>{7852ca5a-61ca-44df-80bc-bec40a1a5193}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\ionosphere">
+      <UniqueIdentifier>{51512738-f5fc-4752-ad16-4e52d3d9023e}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <Image Include="..\docs\Simulation\Simulation.jpg">
+      <Filter>Documentation\Simulation</Filter>
+    </Image>
+    <Image Include="..\docs\Satellite\Ownership.jpg">
+      <Filter>Documentation\Satellite</Filter>
+    </Image>
+    <Image Include="..\docs\BField\Ownership.jpg">
+      <Filter>Documentation\BField</Filter>
+    </Image>
+    <Image Include="..\docs\EField\Ownership.jpg">
+      <Filter>Documentation\EField</Filter>
+    </Image>
+    <Image Include="..\docs\Particle\Particle.jpg">
+      <Filter>Documentation\Particle</Filter>
+    </Image>
+  </ItemGroup>
+</Project>
