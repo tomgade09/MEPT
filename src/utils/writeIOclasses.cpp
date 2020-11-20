@@ -1,4 +1,3 @@
-#include <cmath>
 #include <fstream>
 #include <iostream>
 #include <filesystem>
@@ -168,7 +167,7 @@ namespace utils
 
 		// ======== ParticleDistribution::Public ======== //
 		ParticleDistribution::ParticleDistribution(string saveFolder, vector<string> attrNames, string particleName, double mass, vector<double> padvals, bool write) :
-			saveFolder_m{ saveFolder }, attrNames_m{ attrNames }, particleName_m{ particleName }, mass_m{ mass }, padvals_m{ padvals }, write_m{ write }
+			saveFolder_m{ saveFolder }, attrNames_m{ attrNames }, particleName_m{ particleName }, write_m{ write }, mass_m{ mass }, padvals_m{ padvals }
 		{//ctor(default) for shorthand
 			if (attrNames.size() == 0) throw invalid_argument("ParticleDistribution::ctor(default): invalid attributes - none specified");
 			if (particleName == "") throw invalid_argument("ParticleDistribution::ctor(default): invalid name - none specified");

@@ -1,7 +1,7 @@
 #include "EField/QSPS.h"
 
 #include <iostream>
-#include <filesystem>
+//#include <filesystem>
 
 using std::cerr;
 using std::to_string;
@@ -11,7 +11,7 @@ using namespace utils::fileIO::serialize;
 vector<double> QSPS::getAllAttributes() const
 {
 	vector<double> ret;
-	for (int iii = 0; iii < altMin_m.size(); iii++)
+	for (size_t iii = 0; iii < altMin_m.size(); iii++)
 	{//vectors are guaranteed to be the same size
 		ret.push_back(altMin_m.at(iii));
 		ret.push_back(altMax_m.at(iii));

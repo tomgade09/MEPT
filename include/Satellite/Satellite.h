@@ -26,7 +26,7 @@ protected:
 	bool   upwardFacing_m{ false };
 	bool   initializedGPU_m{ false };
 
-	long numberOfParticles_m{ -1 };
+	size_t numberOfParticles_m{ 0 };
 
 	DBL2DV   data_m; //[attribute][particle]
 	double*  satCaptrData1D_d{ nullptr }; //flattened satellite capture data on GPU
@@ -39,7 +39,7 @@ protected:
 	size_t getAttrIndByName(string name);
 
 public:
-	Satellite(string name, STRVEC attributeNames, meters altitude, bool upwardFacing, long numberOfParticles, double** partDataGPUPtr);
+	Satellite(string name, STRVEC attributeNames, meters altitude, bool upwardFacing, size_t numberOfParticles, double** partDataGPUPtr);
 	Satellite(ifstream& in, double** particleData2D);
 	~Satellite();
 	Satellite(const Satellite&) = delete;
@@ -53,8 +53,8 @@ public:
 	const DBL2DV& data() const;
 	double**      get2DDataGPUPtr() const;
 	double*       get1DDataGPUPtr() const;
-	size_t  getNumberOfAttributes() const;
-	long    getNumberOfParticles()  const;
+	size_t        getNumberOfAttributes() const;
+	size_t        getNumberOfParticles()  const;
 
 	//Other functions
 	void iterateDetector(double simtime, double dt, int blockSize); //increment time, track overall sim time, or take an argument??

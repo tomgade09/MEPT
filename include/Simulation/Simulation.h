@@ -31,12 +31,12 @@ protected:
 
 	struct TempSat
 	{//Struct that holds data to create satellite - allows satellites to be added in any order, but ensure they are created before particles
-		int particleInd;
+		size_t particleInd;
 		double altitude;
 		bool upwardFacing;
 		string name;
 
-		TempSat(int partInd, double alt, bool upward, string nameStr) :
+		TempSat(size_t partInd, double alt, bool upward, string nameStr) :
 			particleInd{ partInd }, altitude{ alt }, upwardFacing{ upward }, name{ nameStr } {}
 	};
 
@@ -115,8 +115,8 @@ public:
 	Log*	   getLog();
 
 	//Simulation data
-	const vector<vector<double>>& getParticleData(int partInd, bool originalData);
-	const vector<vector<double>>& getSatelliteData(int satInd);
+	const vector<vector<double>>& getParticleData(size_t partInd, bool originalData);
+	const vector<vector<double>>& getSatelliteData(size_t satInd);
 
 	//Fields data
 	double getBFieldAtS(double s, double time) const;
@@ -125,9 +125,9 @@ public:
 	//
 	//======== Class Creation Functions ========//
 	//
-	void createParticlesType(string name, double mass, double charge, long numParts, string loadFilesDir = "", bool save = true);
+	void createParticlesType(string name, double mass, double charge, size_t numParts, string loadFilesDir = "", bool save = true);
 	void createTempSat(string partName, double altitude, bool upwardFacing, string name);
-	void createTempSat(int partInd, double altitude, bool upwardFacing, string name);
+	void createTempSat(size_t partInd, double altitude, bool upwardFacing, string name);
 	void setBFieldModel(string name, vector<double> args, bool save = true);
 	void setBFieldModel(unique_ptr<BModel> BModelptr);
 	void addEFieldModel(string name, vector<double> args, bool save = true);
@@ -136,8 +136,8 @@ public:
 	//======== Simulation Management Functions ========//
 	//
 	void initializeSimulation();
-	void __iterateSimCPU(int numberOfIterations, int checkDoneEvery);
-	void iterateSimulation(int numberOfIterations, int itersBtwCouts);
+	void __iterateSimCPU(size_t numberOfIterations, size_t checkDoneEvery);
+	void iterateSimulation(size_t numberOfIterations, size_t itersBtwCouts);
 	void saveDataToDisk();
 	void freeGPUMemory();
 	void resetSimulation(bool fields = false);

@@ -1,5 +1,4 @@
 #include <omp.h>
-
 #include "Simulation/Environment.h"
 #include "ErrorHandling/cudaErrorCheck.h"
 

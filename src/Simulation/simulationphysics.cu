@@ -207,7 +207,7 @@ void Simulation::initializeSimulation()
 	initialized_m = true;
 }
 
-void Simulation::iterateSimulation(int numberOfIterations, int checkDoneEvery)
+void Simulation::iterateSimulation(size_t numberOfIterations, size_t checkDoneEvery)
 {//conducts iterative calculations of data previously copied to GPU - runs the data through the computeKernel
 	using namespace physics;
 	
@@ -244,7 +244,7 @@ void Simulation::iterateSimulation(int numberOfIterations, int checkDoneEvery)
 
 	//Loop code
 	size_t initEntry{ Log_m->createEntry("Iteration 1", false) };
-	for (long cudaloopind = 0; cudaloopind < numberOfIterations; cudaloopind++)
+	for (size_t cudaloopind = 0; cudaloopind < numberOfIterations; cudaloopind++)
 	{	
 		if (cudaloopind % checkDoneEvery == 0) { CUDA_API_ERRCHK(cudaMemset(simDone_d, true, sizeof(bool))); } //if it's going to be checked in this iter (every checkDoneEvery iterations), set to true
 		

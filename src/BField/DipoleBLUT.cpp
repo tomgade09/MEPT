@@ -14,9 +14,9 @@ vector<double> DipoleBLUT::getAllAttributes() const
 {
 	vector<double> ret{ ILAT_m, ds_msmt_m, ds_gradB_m, simMin_m, simMax_m, static_cast<double>(numMsmts_m) };
 	
-	for (int iii = 0; iii < altitude_m.size(); iii++)
+	for (size_t iii = 0; iii < altitude_m.size(); iii++)
 		ret.push_back(altitude_m.at(iii));
-	for (int iii = 0; iii < magnitude_m.size(); iii++)
+	for (size_t iii = 0; iii < magnitude_m.size(); iii++)
 		ret.push_back(magnitude_m.at(iii));
 
 	return ret;

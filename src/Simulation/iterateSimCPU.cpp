@@ -29,7 +29,7 @@ namespace physics
 	void iterateParticle(double* vpara, double* mu, double* s, double* t_incident, double* t_escape, BModel* BModel, EField* efield, const double simtime, const double dt, const double mass, const double charge, const double simmin, const double simmax);
 }
 
-void Simulation::__iterateSimCPU(int numberOfIterations, int checkDoneEvery)
+void Simulation::__iterateSimCPU(size_t numberOfIterations, size_t checkDoneEvery)
 {
 	printSimAttributes(numberOfIterations, checkDoneEvery, "CPU");
 
@@ -43,7 +43,7 @@ void Simulation::__iterateSimCPU(int numberOfIterations, int checkDoneEvery)
 		omp_set_num_threads(std::thread::hardware_concurrency());
 
 		#pragma omp parallel for
-		for (int ind = 0; ind < (*part)->getNumberOfParticles(); ind++)
+		for (int ind = 0; ind < static_cast<int>((*part)->getNumberOfParticles()); ind++)
 		{//convert vperp to mu in Particles memory
 			vperpMuConvert(data.at(0).at(ind), &data.at(1).at(ind), data.at(2).at(ind), data.at(4).at(ind), BFieldModel_m.get(), (*part)->mass(), true);
 		}
@@ -51,7 +51,7 @@ void Simulation::__iterateSimCPU(int numberOfIterations, int checkDoneEvery)
 
 	bool done{ false };
 	size_t initEntry{ Log_m->createEntry("Iteration 1", false) };
-	for (long cudaloopind = 0; cudaloopind < numberOfIterations; cudaloopind++)
+	for (size_t cudaloopind = 0; cudaloopind < numberOfIterations; cudaloopind++)
 	{
 		if (cudaloopind % checkDoneEvery == 0) { done = true; }
 		for (auto part = particles_m.begin(); part < particles_m.end(); part++)
@@ -59,7 +59,7 @@ void Simulation::__iterateSimCPU(int numberOfIterations, int checkDoneEvery)
 			vector<vector<double>>& data = (*part)->__data(false); //get a reference to the particle's curr data array-
 
 			#pragma omp parallel for
-			for (int ind = 0; ind < (*part)->getNumberOfParticles(); ind++)
+			for (int ind = 0; ind < static_cast<int>((*part)->getNumberOfParticles()); ind++)
 			{
 				iterateParticle(&data.at(0).at(ind), &data.at(1).at(ind), &data.at(2).at(ind), &data.at(3).at(ind), &data.at(4).at(ind),
 					BFieldModel_m.get(), EFieldModel_m.get(), simTime_m, dt_m, (*part)->mass(), (*part)->charge(), simMin_m, simMax_m);
@@ -102,7 +102,7 @@ void Simulation::__iterateSimCPU(int numberOfIterations, int checkDoneEvery)
 	for (auto part = particles_m.begin(); part < particles_m.end(); part++)
 	{
 		vector<vector<double>> tmp{ (*part)->data(false) };
-		for (int ind = 0; ind < (*part)->getNumberOfParticles(); ind++)
+		for (size_t ind = 0; ind < (*part)->getNumberOfParticles(); ind++)
 		{//convert mu to vperp in Particles memory
 			vperpMuConvert(tmp.at(0).at(ind), &tmp.at(1).at(ind), tmp.at(2).at(ind), tmp.at(4).at(ind), BFieldModel_m.get(), (*part)->mass(), false);
 		}

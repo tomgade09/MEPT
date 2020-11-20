@@ -22,7 +22,7 @@ using utils::fileIO::readDblBin;
 using utils::fileIO::writeDblBin;
 using namespace utils::fileIO::serialize;
 
-Particles::Particles(string name, vector<string> attributeNames, double mass, double charge, long numParts) :
+Particles::Particles(string name, vector<string> attributeNames, double mass, double charge, size_t numParts) :
 	name_m{ name }, attributeNames_m{ attributeNames }, mass_m{ mass }, charge_m{ charge }, numberOfParticles_m{ numParts }
 {
 	origData_m = vector<vector<double>>(attributeNames.size(), vector<double>(numParts));
@@ -121,7 +121,7 @@ double Particles::charge() const
 	return charge_m;
 }
 
-long Particles::getNumberOfParticles() const
+size_t Particles::getNumberOfParticles() const
 {
 	return numberOfParticles_m;
 }
@@ -239,7 +239,7 @@ void Particles::loadDataFromMem(vector<vector<double>> data, bool orig) //orig d
 
 void Particles::loadDataFromDisk(string folder, bool orig) //orig defaults to true
 {
-	for (int attrs = 0; attrs < attributeNames_m.size(); attrs++)
+	for (size_t attrs = 0; attrs < attributeNames_m.size(); attrs++)
 		FILE_RDWR_EXCEP_CHECK(readDblBin((orig ? origData_m.at(attrs) : currData_m.at(attrs)), folder + "/" + name_m + "_" + attributeNames_m.at(attrs) + ".bin", numberOfParticles_m));
 
 	if (orig) initDataLoaded_m = true; //copyDataToGPU uses this flag to ensure data is present in origData_m
@@ -248,7 +248,7 @@ void Particles::loadDataFromDisk(string folder, bool orig) //orig defaults to tr
 
 void Particles::saveDataToDisk(string folder, bool orig) const
 {
-	for (int attrs = 0; attrs < attributeNames_m.size(); attrs++)
+	for (size_t attrs = 0; attrs < attributeNames_m.size(); attrs++)
 		FILE_RDWR_EXCEP_CHECK(writeDblBin((orig ? origData_m.at(attrs) : currData_m.at(attrs)), folder + "/" + name_m + "_" + attributeNames_m.at(attrs) + ".bin", numberOfParticles_m));
 }
 
@@ -265,7 +265,7 @@ void Particles::serialize(ofstream& out) const
 	
 	out.write(reinterpret_cast<const char*>(&initDataLoaded_m), sizeof(bool));
 	out.write(reinterpret_cast<const char*>(&initializedGPU_m), sizeof(bool));
-	out.write(reinterpret_cast<const char*>(&numberOfParticles_m), sizeof(long));
+	out.write(reinterpret_cast<const char*>(&numberOfParticles_m), sizeof(size_t));
 	out.write(reinterpret_cast<const char*>(&mass_m), sizeof(double));
 	out.write(reinterpret_cast<const char*>(&charge_m), sizeof(double));
 }
@@ -277,7 +277,7 @@ void Particles::deserialize(ifstream& in) //protected function
 
 	in.read(reinterpret_cast<char*>(&initDataLoaded_m), sizeof(bool));
 	in.read(reinterpret_cast<char*>(&initializedGPU_m), sizeof(bool));
-	in.read(reinterpret_cast<char*>(&numberOfParticles_m), sizeof(long));
+	in.read(reinterpret_cast<char*>(&numberOfParticles_m), sizeof(size_t));
 	in.read(reinterpret_cast<char*>(&mass_m), sizeof(double));
 	in.read(reinterpret_cast<char*>(&charge_m), sizeof(double));
 }

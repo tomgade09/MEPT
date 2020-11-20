@@ -3,7 +3,7 @@
 #include <sstream>
 
 #include "Log/Log.h"
-#include "errorHandling/simExceptionMacros.h"
+#include "ErrorHandling/simExceptionMacros.h"
 
 using std::cout;
 using std::cerr;
@@ -23,7 +23,7 @@ using namespace std::chrono;
 	writing_m = false;
 
 Log::Entry::Entry(std::chrono::steady_clock::time_point time, string message, bool write, bool error) :
-	time_m{ time }, message_m{ message }, write_m{ write }, error_m{ error }
+	time_m{ time }, message_m{ message }, error_m{ error }, write_m{ write }
 {
 	
 }
