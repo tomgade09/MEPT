@@ -22,7 +22,7 @@ using utils::fileIO::readDblBin;
 using utils::fileIO::writeDblBin;
 using namespace utils::fileIO::serialize;
 
-Satellite::Satellite(string name, vector<string> attributeNames, meters altitude, bool upwardFacing, long numberOfParticles, double** partDataGPUPtr) :
+Satellite::Satellite(string name, vector<string> attributeNames, meters altitude, bool upwardFacing, size_t numberOfParticles, double** partDataGPUPtr) :
 	name_m{ name }, attributeNames_m{ attributeNames }, altitude_m{ altitude }, upwardFacing_m{ upwardFacing }, numberOfParticles_m{ numberOfParticles }, particleData2D_d{ partDataGPUPtr }
 {
 	data_m = vector<vector<double>>(attributeNames_m.size(), vector<double>(numberOfParticles_m));
@@ -200,7 +200,7 @@ size_t Satellite::getNumberOfAttributes() const
 	return attributeNames_m.size();
 }
 
-long Satellite::getNumberOfParticles() const
+size_t Satellite::getNumberOfParticles() const
 {
 	return numberOfParticles_m;
 }
@@ -218,7 +218,7 @@ void Satellite::serialize(ofstream& out) const
 	out.write(reinterpret_cast<const char*>(&altitude_m), sizeof(meters));
 	out.write(reinterpret_cast<const char*>(&upwardFacing_m), sizeof(bool));
 	out.write(reinterpret_cast<const char*>(&initializedGPU_m), sizeof(bool));
-	out.write(reinterpret_cast<const char*>(&numberOfParticles_m), sizeof(long));
+	out.write(reinterpret_cast<const char*>(&numberOfParticles_m), sizeof(size_t));
 }
 
 void Satellite::deserialize(ifstream& in)
@@ -229,5 +229,5 @@ void Satellite::deserialize(ifstream& in)
 	in.read(reinterpret_cast<char*>(&altitude_m), sizeof(meters));
 	in.read(reinterpret_cast<char*>(&upwardFacing_m), sizeof(bool));
 	in.read(reinterpret_cast<char*>(&initializedGPU_m), sizeof(bool));
-	in.read(reinterpret_cast<char*>(&numberOfParticles_m), sizeof(long));
+	in.read(reinterpret_cast<char*>(&numberOfParticles_m), sizeof(size_t));
 }

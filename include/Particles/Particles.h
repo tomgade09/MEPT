@@ -30,9 +30,9 @@ protected:
 	bool initDataLoaded_m{ false };
 	bool initializedGPU_m{ false }; //consider what to do with this with multi GPU - still necessary?
 
-	long numberOfParticles_m;
 	double mass_m;
 	double charge_m;
+	size_t numberOfParticles_m;
 
 	//device pointers
 	double*  currData1D_d{ nullptr }; //make vectors for handling multiple GPUs
@@ -44,7 +44,7 @@ protected:
 	void deserialize(ifstream& in);
 
 public:
-	Particles(string name, vector<string> attributeNames, double mass, double charge, long numParts);
+	Particles(string name, vector<string> attributeNames, double mass, double charge, size_t numParts);
 	Particles(ifstream& in);
 	~Particles();
 	Particles(const Particles&) = delete;
@@ -58,7 +58,7 @@ public:
 	double        mass()          const;
 	double        charge()        const;
 	size_t        getNumberOfAttributes() const;
-	long          getNumberOfParticles()  const;
+	size_t        getNumberOfParticles()  const;
 	bool          getInitDataLoaded() const;
 	double**      getCurrDataGPUPtr() const;
 

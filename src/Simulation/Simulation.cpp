@@ -1,5 +1,6 @@
 #include "Simulation/Simulation.h"
 
+#include <iomanip>
 #include <filesystem>
 
 #include "utils/loopmacros.h"
@@ -62,7 +63,7 @@ Simulation::Simulation(double dt, double simMin, double simMax) :
 }
 
 Simulation::Simulation(string saveRootDir) : saveRootDir_m{ saveRootDir + "/" },
-Log_m{ make_unique<Log>(saveRootDir_m + "reload.log") }, previousSim_m{ true }
+	previousSim_m{ true }, Log_m{ make_unique<Log>(saveRootDir_m + "reload.log") }
 {
 	SIM_API_EXCEP_CHECK(loadSimulation(saveRootDir_m));
 	loadDataFromDisk();
@@ -220,14 +221,14 @@ Log* Simulation::getLog()
 
 
 //Simulation data
-const vector<vector<double>>& Simulation::getParticleData(int partInd, bool originalData)
+const vector<vector<double>>& Simulation::getParticleData(size_t partInd, bool originalData)
 {
 	if (partInd > (particles_m.size() - 1))
 		throw out_of_range("Simulation::getParticleData: no particle at the specifed index " + to_string(partInd));
 	return ((originalData) ? (particles_m.at(partInd)->data(true)) : (particles_m.at(partInd)->data(false)));
 }
 
-const vector<vector<double>>& Simulation::getSatelliteData(int satInd)
+const vector<vector<double>>& Simulation::getSatelliteData(size_t satInd)
 {
 	if (satInd > (satPartPairs_m.size() - 1))
 		throw out_of_range("Simulation::getSatelliteData: no satellite at the specifed index " + to_string(satInd));
@@ -249,7 +250,7 @@ double Simulation::getEFieldAtS(double s, double time) const
 //
 //======== Class Creation Functions ========//
 //
-void Simulation::createParticlesType(string name, double mass, double charge, long numParts, string loadFilesDir, bool save)
+void Simulation::createParticlesType(string name, double mass, double charge, size_t numParts, string loadFilesDir, bool save)
 {
 	for (size_t part = 0; part < particles_m.size(); part++)
 		if (name == particles_m.at(part).get()->name())
@@ -293,7 +294,7 @@ void Simulation::createTempSat(string partName, double altitude, bool upwardFaci
 	throw invalid_argument("Simulation::createTempSat: no particle of name " + name);
 }
 
-void Simulation::createTempSat(int partInd, double altitude, bool upwardFacing, string name)
+void Simulation::createTempSat(size_t partInd, double altitude, bool upwardFacing, string name)
 {//"Temp Sats" are necessary to ensure particles are created before their accompanying satellites
 	if (initialized_m)
 		throw runtime_error("Simulation::createTempSat: initializeSimulation has already been called, no satellite will be created of name " + name);
@@ -305,7 +306,7 @@ void Simulation::createTempSat(int partInd, double altitude, bool upwardFacing, 
 
 void Simulation::createSatellite(TempSat* tmpsat, bool save) //protected
 {
-	int partInd{ tmpsat->particleInd };
+	size_t partInd{ tmpsat->particleInd };
 	double altitude{ tmpsat->altitude };
 	bool upwardFacing{ tmpsat->upwardFacing };
 	string name{ tmpsat->name };

@@ -36,9 +36,6 @@
     <ClCompile Include="..\src\utils\numerical.cpp">
       <Filter>Source Files\utils</Filter>
     </ClCompile>
-    <ClCompile Include="..\src\utils\random.cpp">
-      <Filter>Source Files\utils</Filter>
-    </ClCompile>
     <ClCompile Include="..\src\Simulation\Simulation.cpp">
       <Filter>Source Files\Simulation</Filter>
     </ClCompile>
@@ -99,10 +96,10 @@
       <Filter>Header Files\EField</Filter>
     </ClInclude>
     <ClInclude Include="..\include\ErrorHandling\cudaErrorCheck.h">
-      <Filter>Header Files\errorHandling</Filter>
+      <Filter>Header Files\ErrorHandling</Filter>
     </ClInclude>
     <ClInclude Include="..\include\ErrorHandling\simExceptionMacros.h">
-      <Filter>Header Files\errorHandling</Filter>
+      <Filter>Header Files\ErrorHandling</Filter>
     </ClInclude>
     <ClInclude Include="..\include\EField\QSPS.h">
       <Filter>Header Files\EField</Filter>
@@ -123,7 +120,7 @@
       <Filter>Header Files\utils</Filter>
     </ClInclude>
     <ClInclude Include="..\include\ErrorHandling\cudaDeviceMacros.h">
-      <Filter>Header Files\errorHandling</Filter>
+      <Filter>Header Files\ErrorHandling</Filter>
     </ClInclude>
     <ClInclude Include="..\include\dlldefines.h">
       <Filter>Header Files</Filter>
@@ -202,6 +199,18 @@
     <None Include="..\docs\Particles\README.md">
       <Filter>Documentation\Particles</Filter>
     </None>
+    <None Include="..\.gitignore">
+      <Filter>Other Files</Filter>
+    </None>
+    <None Include="..\configure">
+      <Filter>Other Files</Filter>
+    </None>
+    <None Include="..\Makefile">
+      <Filter>Other Files</Filter>
+    </None>
+    <None Include="..\README.md">
+      <Filter>Other Files</Filter>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="Header Files">
@@ -279,9 +288,6 @@
     <Filter Include="Source Files\utils\IO">
       <UniqueIdentifier>{5b674949-5f2f-490e-894a-84d3b0cce31d}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Header Files\errorHandling">
-      <UniqueIdentifier>{64f89fb8-0de4-4577-be61-c1b8fac0a175}</UniqueIdentifier>
-    </Filter>
     <Filter Include="Header Files\utils\macros">
       <UniqueIdentifier>{dbb49a59-887a-4a30-af2e-2ff4298c2883}</UniqueIdentifier>
     </Filter>
@@ -299,6 +305,12 @@
     </Filter>
     <Filter Include="Documentation\Particles">
       <UniqueIdentifier>{17ef3db8-a974-44ea-a3b3-1df7534570f1}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\ErrorHandling">
+      <UniqueIdentifier>{64f89fb8-0de4-4577-be61-c1b8fac0a175}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Other Files">
+      <UniqueIdentifier>{db16776e-a909-4b4c-a043-5e3983df1180}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>

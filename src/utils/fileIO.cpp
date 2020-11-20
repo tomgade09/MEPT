@@ -153,7 +153,7 @@ namespace utils
 					{
 						csv << std::setprecision(precision) << dataarray.at(jjj).at(iii) << delim;
 					}
-					catch (std::out_of_range) //if the csv being written has uneven columns, this just fills in a blank where there's no data
+					catch (std::out_of_range&) //if the csv being written has uneven columns, this just fills in a blank where there's no data
 					{
 						csv << "" << delim;
 					}
