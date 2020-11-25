@@ -19,7 +19,7 @@ constexpr double LAMBDAERRTOL{ 1.0e-10 }; //the error tolerance of DipoleB's lam
 //setup CUDA kernels
 namespace DipoleBLUT_d
 {
-	__global__ void setupEnvironmentGPU(BModel** this_d, double ILATDeg, double simMin, double simMax, double ds_gradB, int numMsmts, double* altArray, double* magArray)
+	__global__ void setupEnvironmentGPU(BModel** this_d, float ILATDeg, float simMin, float simMax, float ds_gradB, int numMsmts, float* altArray, float* magArray)
 	{
 		ZEROTH_THREAD_ONLY(
 			*this_d = new DipoleBLUT(ILATDeg, simMin, simMax, ds_gradB, numMsmts);
@@ -40,12 +40,12 @@ namespace DipoleBLUT_d
 __host__ void DipoleBLUT::setupEnvironment()
 {// consts: [ ILATDeg, L, L_norm, s_max, ds, errorTolerance ]
 	CUDA_API_ERRCHK(cudaMalloc((void**)&this_d, sizeof(DipoleBLUT*)));
-	CUDA_API_ERRCHK(cudaMalloc((void**)&altitude_d, sizeof(meters) * numMsmts_m));
-	CUDA_API_ERRCHK(cudaMalloc((void**)&magnitude_d, sizeof(tesla) * numMsmts_m));
+	CUDA_API_ERRCHK(cudaMalloc((void**)&altitude_d, sizeof(float) * numMsmts_m));
+	CUDA_API_ERRCHK(cudaMalloc((void**)&magnitude_d, sizeof(float) * numMsmts_m));
 
 	#ifndef __CUDA_ARCH__ //host code
-	CUDA_API_ERRCHK(cudaMemcpy(altitude_d, altitude_m.data(), sizeof(meters) * numMsmts_m, cudaMemcpyHostToDevice));
-	CUDA_API_ERRCHK(cudaMemcpy(magnitude_d, magnitude_m.data(), sizeof(meters) * numMsmts_m, cudaMemcpyHostToDevice));
+	CUDA_API_ERRCHK(cudaMemcpy(altitude_d, altitude_m.data(), sizeof(float) * numMsmts_m, cudaMemcpyHostToDevice));
+	CUDA_API_ERRCHK(cudaMemcpy(magnitude_d, magnitude_m.data(), sizeof(float) * numMsmts_m, cudaMemcpyHostToDevice));
 	#endif /* !__CUDA_ARCH__ */
 	
 	DipoleBLUT_d::setupEnvironmentGPU <<< 1, 1 >>> (this_d, ILAT_m, simMin_m, simMax_m, ds_gradB_m, numMsmts_m, altitude_d, magnitude_d);
@@ -128,15 +128,15 @@ __host__ __device__ double DipoleBLUT::getGradBAtS(const meters s, const seconds
 __host__ __device__ meters DipoleBLUT::getSAtAlt(const meters alt_fromRe) const
 {
 	//admittedly, this is a pretty inefficient way of doing this...but it's not used often
-	return DipoleB(ILAT_m, 1.0e-4, RADIUS_EARTH / 1000.0, false).getSAtAlt(alt_fromRe);
+	return DipoleB(ILAT_m, 1.0e-4, RADIUS_EARTH / 1000.0f, false).getSAtAlt(alt_fromRe);
 }
 
-__device__ void DipoleBLUT::setAltArray(double* altArray)
+__device__ void DipoleBLUT::setAltArray(float* altArray)
 {
 	altitude_d = altArray;
 }
 
-__device__ void DipoleBLUT::setMagArray(double* magArray)
+__device__ void DipoleBLUT::setMagArray(float* magArray)
 {
 	magnitude_d = magArray;
 }

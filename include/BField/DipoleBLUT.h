@@ -20,8 +20,8 @@ protected:
 	#endif /* !__CUDA_ARCH__ */
 
 	//on device variables
-	double* altitude_d{ nullptr }; //serves as device-side C-style vector equivalent, and on host, pointer to this on dev
-	double* magnitude_d{ nullptr };
+	float* altitude_d{ nullptr }; //serves as device-side C-style vector equivalent, and on host, pointer to this on dev
+	float* magnitude_d{ nullptr };
 	
 	meters  simMin_m{ 0.0 };
 	meters  simMax_m{ 0.0 };
@@ -47,8 +47,8 @@ public:
 	__host__ __device__ double  getGradBAtS(const meters s, const seconds t) const override;
 	__host__ __device__ meters  getSAtAlt(const meters alt_fromRe) const override;
 
-    __device__          void    setAltArray(double* altArray);
-	__device__          void    setMagArray(double* magArray);
+    __device__          void    setAltArray(float* altArray);
+	__device__          void    setMagArray(float* magArray);
 
 	__host__            ratio   getErrTol() const;
 	__host__            meters  getds()     const;

@@ -279,8 +279,8 @@ namespace utils
 					}
 					else if (range.type_m == Range::Type::pitchAngle)
 					{
-						degrees PA_start{ range.min_m };
-						degrees PA_end  { range.max_m };
+						degrees PA_start{ (degrees)range.min_m };
+						degrees PA_end  { (degrees)range.max_m };
 
 						if (range.optn_m) //optn_m is midBin
 						{ //if mid bin values are desired, adjust start and end range, and set endInclusive in generateSpacedValues
@@ -334,7 +334,8 @@ namespace utils
 			{
 				if (attrNames_m.at(attr) == "s")
 				{
-					ret.at(attr) = s;
+					vector<double>sDouble(s.begin(), s.end());
+					ret.at(attr) = sDouble;
 					return ret;
 				}
 			}

@@ -29,16 +29,16 @@ void QSPS::serialize(ofstream& out) const
 	};
 
 	// ======== write data to file ======== //
-	writeStrBuf(serializeDoubleVector(altMin_m));
-	writeStrBuf(serializeDoubleVector(altMax_m));
+	writeStrBuf(serializeFloatVector(altMin_m));
+	writeStrBuf(serializeFloatVector(altMax_m));
 	writeStrBuf(serializeDoubleVector(magnitude_m));
 	out.write(reinterpret_cast<const char*>(&useGPU_m), sizeof(bool));
 }
 
 void QSPS::deserialize(ifstream& in)
 {
-	altMin_m = deserializeDoubleVector(in);
-	altMax_m = deserializeDoubleVector(in);
+	altMin_m = deserializeFloatVector(in);
+	altMax_m = deserializeFloatVector(in);
 	magnitude_m = deserializeDoubleVector(in);
 	in.read(reinterpret_cast<char*>(&useGPU_m), sizeof(bool));
 }

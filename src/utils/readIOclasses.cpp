@@ -36,7 +36,7 @@ namespace utils
 			std::cout << std::endl;
 
 			vector<double> E{ { 0.0 } };
-			vector<double> Pitch{ { 0.0 } };
+			vector<degrees> Pitch{ { 0.0 } };
 			numerical::v2DtoEPitch({ data_m.at(0).at(at) }, { data_m.at(1).at(at) }, mass_m, E, Pitch);
 			std::cout << "E, Pitch: " << E.at(0) << ", " << Pitch.at(0) << "\n";
 		}

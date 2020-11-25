@@ -31,8 +31,8 @@ void DipoleBLUT::serialize(ofstream& out) const
 
 	// ======== write data to file ======== //
 	writeStrBuf(serializeDoubleVector(getAllAttributes()));
-	writeStrBuf(serializeDoubleVector(altitude_m));
-	writeStrBuf(serializeDoubleVector(magnitude_m));
+	writeStrBuf(serializeFloatVector(altitude_m));
+	writeStrBuf(serializeFloatVector(magnitude_m));
 	out.write(reinterpret_cast<const char*>(&numMsmts_m), sizeof(int));
 	out.write(reinterpret_cast<const char*>(&useGPU_m), sizeof(bool));
 }
@@ -45,8 +45,8 @@ void DipoleBLUT::deserialize(ifstream& in)
 	ds_gradB_m = attrs.at(2);
 	simMin_m = attrs.at(3);
 	simMax_m = attrs.at(4);
-	altitude_m = deserializeDoubleVector(in);
-	magnitude_m = deserializeDoubleVector(in);
+	altitude_m = deserializeFloatVector(in);
+	magnitude_m = deserializeFloatVector(in);
 	in.read(reinterpret_cast<char*>(&numMsmts_m), sizeof(int));
 	in.read(reinterpret_cast<char*>(&useGPU_m), sizeof(bool));
 

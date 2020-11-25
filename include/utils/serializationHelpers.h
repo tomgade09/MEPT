@@ -13,6 +13,7 @@ using std::ofstream;
 using std::ifstream;
 using std::stringbuf;
 
+#define floatvec vector<float>
 #define doublevec vector<double>
 #define stringvec vector<string>
 
@@ -26,10 +27,12 @@ namespace utils
 			void   writeSizetLength(ofstream& out, size_t size);
 
 			stringbuf serializeString(const string& str);
+			stringbuf serializeFloatVector(const vector<float>& vec);
 			stringbuf serializeDoubleVector(const vector<double>& vec);
 			stringbuf serializeStringVector(const vector<string>& vec);
 
 			string    deserializeString(ifstream& istr);
+			floatvec  deserializeFloatVector(ifstream& istr);
 			doublevec deserializeDoubleVector(ifstream& istr);
 			stringvec deserializeStringVector(ifstream& istr);
 		}

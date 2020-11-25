@@ -11,7 +11,7 @@ constexpr double B0{ 3.12e-5 }; //B_0 for Earth dipole B model
 //setup CUDA kernels
 namespace DipoleB_d
 {
-	__global__ void setupEnvironmentGPU(BModel** this_d, degrees ILAT, ratio errTol, double ds)
+	__global__ void setupEnvironmentGPU(BModel** this_d, degrees ILAT, ratio errTol, float ds)
 	{
 		ZEROTH_THREAD_ONLY((*this_d) = new DipoleB(ILAT, errTol, ds));
 	}
@@ -82,9 +82,9 @@ __host__ __device__ meters DipoleB::getSAtLambda(const degrees lambda) const
 
 __host__ __device__ degrees DipoleB::getLambdaAtS(const meters s) const
 {
-	degrees lambda_tmp{ (-ILAT_m / s_max_m) * s + ILAT_m }; //-ILAT / s_max * s + ILAT
-	meters  s_tmp{ s_max_m - getSAtLambda(lambda_tmp) };
-	degrees dlambda{ 1.0 };
+	double lambda_tmp{ (-ILAT_m / s_max_m) * s + ILAT_m }; //-ILAT / s_max * s + ILAT
+	double  s_tmp{ s_max_m - getSAtLambda(lambda_tmp) };
+	double dlambda{ 1.0 };
 	bool    over{ 0 };
 
 	while (abs((s_tmp - s) / s) > lambdaErrorTolerance_m)
@@ -112,15 +112,15 @@ __host__ __device__ degrees DipoleB::getLambdaAtS(const meters s) const
 		dlambda /= 5.0; //through trial and error, this reduces the number of calculations usually (compared with 2, 2.5, 3, 4, 10)
 	}
 
-	return lambda_tmp;
+	return (degrees)lambda_tmp;
 }
 
 __host__ __device__ tesla DipoleB::getBFieldAtS(const meters s, const seconds simtime) const
 {// consts: [ ILATDeg, L, L_norm, s_max, ds, lambdaErrorTolerance ]
 	degrees lambda{ getLambdaAtS(s) };
-	meters  rnorm{ L_norm_m * cospi(lambda / 180.0) * cospi(lambda / 180.0) };
+	meters  rnorm{ L_norm_m * cospif(lambda / 180.0) * cospif(lambda / 180.0) };
 
-	return -B0 / (rnorm * rnorm * rnorm) * sqrt(1.0 + 3 * sinpi(lambda / 180.0) * sinpi(lambda / 180.0));
+	return -B0 / (rnorm * rnorm * rnorm) * sqrtf(1.0 + 3 * sinpif(lambda / 180.0) * sinpif(lambda / 180.0));
 }
 
 __host__ __device__ double DipoleB::getGradBAtS(const meters s, const seconds simtime) const

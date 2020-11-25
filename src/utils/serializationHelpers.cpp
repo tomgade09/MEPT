@@ -54,6 +54,12 @@ namespace utils
 				
 				return sb;
 			}
+			
+			stringbuf serializeFloatVector(const vector<float>& vec)
+			{
+				std:vector<double> doubleVec(vec.begin(), vec.end());
+				return serializeDoubleVector(doubleVec);
+			}
 
 			stringbuf serializeStringVector(const vector<string>& vec)
 			{
@@ -71,7 +77,7 @@ namespace utils
 			// ================ deserialize functions ================ //
 			string deserializeString(ifstream& istr)
 			{
-				size_t strlen{ readSizetLength(istr) };
+				const size_t strlen{ readSizetLength(istr) };
 
 				vector<char> strchar(strlen, '\0');
 				istr.read(strchar.data(), strlen);
@@ -83,7 +89,7 @@ namespace utils
 			
 			vector<double> deserializeDoubleVector(ifstream& istr)
 			{
-				size_t veclen{ readSizetLength(istr) };
+				const size_t veclen{ readSizetLength(istr) };
 				vector<double> ret;
 				
 				for (size_t elem = 0; elem < veclen; elem++)
@@ -95,10 +101,25 @@ namespace utils
 
 				return ret;
 			}
+			
+			vector<float> deserializeFloatVector(ifstream& istr)
+			{
+				const size_t veclen{ readSizetLength(istr) };
+				vector<float> ret;
+				
+				for (size_t elem = 0; elem < veclen; elem++)
+				{
+					vector<char> fchar(sizeof(float), '\0');
+					istr.read(fchar.data(), sizeof(float));
+					ret.push_back(*(reinterpret_cast<float*>(fchar.data())));
+				}
+
+				return ret;
+			}
 
 			vector<string> deserializeStringVector(ifstream& istr)
 			{
-				size_t vecsize{ readSizetLength(istr) };
+				const size_t vecsize{ readSizetLength(istr) };
 				vector<string> ret;
 
 				for (size_t elem = 0; elem < vecsize; elem++)

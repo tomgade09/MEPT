@@ -165,7 +165,7 @@ string Satellite::name() const
 	return name_m;
 }
 
-double Satellite::altitude() const
+meters Satellite::altitude() const
 {
 	return altitude_m;
 }
