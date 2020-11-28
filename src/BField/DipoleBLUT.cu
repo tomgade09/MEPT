@@ -116,7 +116,8 @@ __host__ __device__ tesla DipoleBLUT::getBFieldAtS(const meters s, const seconds
 	#ifndef __CUDA_ARCH__ //host code
 	return (s - altitude_m.at(startInd)) * (magnitude_m.at(startInd + 1) - magnitude_m.at(startInd)) / ds_msmt_m + magnitude_m.at(startInd); //B = ms + b(0)
 	#else
-	return (s - altitude_d[startInd]) * (magnitude_d[startInd + 1] - magnitude_d[startInd]) / ds_msmt_m + magnitude_d[startInd]; //B = ms + b(0)
+	const float mag_d = magnitude_d[startInd];
+	return (s - altitude_d[startInd]) * (magnitude_d[startInd + 1] - mag_d) / ds_msmt_m + mag_d; //B = ms + b(0)
 	#endif /* !__CUDA_ARCH__ */
 }
 
