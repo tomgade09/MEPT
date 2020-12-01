@@ -22,18 +22,18 @@ using utils::fileIO::readDblBin;
 using utils::fileIO::writeDblBin;
 using namespace utils::fileIO::serialize;
 
-Satellite::Satellite(string name, vector<string> attributeNames, meters altitude, bool upwardFacing, size_t numberOfParticles, double** partDataGPUPtr) :
+Satellite::Satellite(string name, vector<string> attributeNames, meters altitude, bool upwardFacing, size_t numberOfParticles, float** partDataGPUPtr) :
 	name_m{ name }, attributeNames_m{ attributeNames }, altitude_m{ altitude }, upwardFacing_m{ upwardFacing }, numberOfParticles_m{ numberOfParticles }, particleData2D_d{ partDataGPUPtr }
 {
-	data_m = vector<vector<double>>(attributeNames_m.size(), vector<double>(numberOfParticles_m));
+	data_m = vector<vector<float>>(attributeNames_m.size(), vector<float>(numberOfParticles_m));
 	initializeGPU();
 }
 
-Satellite::Satellite(ifstream& in, double** particleData2D) : particleData2D_d{ particleData2D }
+Satellite::Satellite(ifstream& in, float** particleData2D) : particleData2D_d{ particleData2D }
 {
 	deserialize(in);
 
-	data_m = vector<vector<double>>(attributeNames_m.size(), vector<double>(numberOfParticles_m));
+	data_m = vector<vector<float>>(attributeNames_m.size(), vector<float>(numberOfParticles_m));
 	initializeGPU();
 }
 
@@ -78,18 +78,18 @@ void Satellite::freeGPUMemory()
 	initializedGPU_m = false;
 }
 
-vector<vector<double>> Satellite::removeZerosData()
+vector<vector<float>> Satellite::removeZerosData()
 {//GOING TO HAVE TO REMOVE TO SOMEWHERE - IMPLEMENTATION DEFINED, NOT GENERIC
 	copyDataToHost();
 
-	vector<vector<double>> dataCopy{ data_m }; //don't want to do this to the live data so create a copy
-	vector<double> timeCopy{ dataCopy.at(getAttrIndByName("time")) }; //make a copy, because t_esc's zeroes are removed as well
+	vector<vector<float>> dataCopy{ data_m }; //don't want to do this to the live data so create a copy
+	vector<float> timeCopy{ dataCopy.at(getAttrIndByName("time")) }; //make a copy, because t_esc's zeroes are removed as well
 
 	for (auto& attr : dataCopy)
 	{//below searches time vector copy for -1.0 and removes the element if so (no negatives should exist except -1)
-		auto checkIfNegOne = [&](double& x)
+		auto checkIfNegOne = [&](float& x)
 		{
-			return (timeCopy.at(&x - &(*attr.begin())) < 0.0);
+			return (timeCopy.at(&x - &(*attr.begin())) < 0.0f);
 		};
 
 		attr.erase(remove_if(attr.begin(), attr.end(), checkIfNegOne), attr.end());
@@ -100,7 +100,7 @@ vector<vector<double>> Satellite::removeZerosData()
 
 void Satellite::saveDataToDisk(string folder) //move B and mass to getConsolidatedData and have it convert back (or in gpu?)
 {
-	vector<vector<double>> results{ removeZerosData() };
+	vector<vector<float>> results{ removeZerosData() };
 
 	for (size_t attr = 0; attr < results.size(); attr++)
 		writeDblBin(results.at(attr), folder + name_m + "_" + attributeNames_m.at(attr) + ".bin", results.at(attr).size());
@@ -108,7 +108,7 @@ void Satellite::saveDataToDisk(string folder) //move B and mass to getConsolidat
 
 void Satellite::loadDataFromDisk(string folder)
 {
-	data_m = vector<vector<double>>(attributeNames_m.size()); //this is done so readDblBin doesn't assume how many particles it's reading
+	data_m = vector<vector<float>>(attributeNames_m.size()); //this is done so readDblBin doesn't assume how many particles it's reading
 
 	for (size_t attr = 0; attr < attributeNames_m.size(); attr++)
 		readDblBin(data_m.at(attr), folder + name_m + "_" + attributeNames_m.at(attr) + ".bin");
@@ -137,22 +137,22 @@ void Satellite::loadDataFromDisk(string folder)
 		for (int part = numberOfParticles_m - 1; part >= 0; part--) //particles, iterating backwards
 		{
 			int originalParticleIndex{ (int)data_m.at(index).at(part) }; //original index of the particle
-			if (originalParticleIndex == 0 && data_m.at(0).at(part) == 0.0 && data_m.at(1).at(part) == 0.0)
+			if (originalParticleIndex == 0 && data_m.at(0).at(part) == 0.0 && data_m.at(1).at(part) == 0.0f)
 			{
 				data_m.at(t_esc).at(part) = -1;
 				data_m.at(index).at(part) = -1;
 			}
 			else if ((originalParticleIndex != part) && (originalParticleIndex != -1))
 			{
-				if ((int)data_m.at(0).at(originalParticleIndex) != 0.0)
+				if ((int)data_m.at(0).at(originalParticleIndex) != 0.0f)
 					throw runtime_error("Satellite::loadDataFromDisk: data is being overwritten in reconstructed array - something is wrong " + to_string(originalParticleIndex));
 
 				for (size_t attr = 0; attr < data_m.size(); attr++)
 				{
 					data_m.at(attr).at(originalParticleIndex) = data_m.at(attr).at(part); //move attr at the current location in iteration - part - to the index where it should be - ind
 
-					if (attr == index || attr == t_esc) data_m.at(attr).at(part) = -1.0;
-					else data_m.at(attr).at(part) = 0.0; //overwrite the old data with 0s and -1s
+					if (attr == index || attr == t_esc) data_m.at(attr).at(part) = -1.0f;
+					else data_m.at(attr).at(part) = 0.0f; //overwrite the old data with 0s and -1s
 				}
 			}
 
@@ -175,22 +175,22 @@ bool Satellite::upward() const
 	return upwardFacing_m;
 }
 
-vector<vector<double>>& Satellite::__data()
+vector<vector<float>>& Satellite::__data()
 {
 	return data_m;
 }
 
-const vector<vector<double>>& Satellite::data() const
+const vector<vector<float>>& Satellite::data() const
 {
 	return data_m;
 }
 
-double** Satellite::get2DDataGPUPtr() const
+float** Satellite::get2DDataGPUPtr() const
 {
 	return satCaptrData2D_d;
 }
 
-double* Satellite::get1DDataGPUPtr() const
+float* Satellite::get1DDataGPUPtr() const
 {
 	return satCaptrData1D_d;
 }

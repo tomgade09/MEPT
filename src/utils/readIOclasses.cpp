@@ -10,13 +10,13 @@ namespace utils
 {
 	namespace fileIO
 	{
-		DistributionFromDisk::DistributionFromDisk(string name, string folder, string partName, vector<string> attrNames, double mass) : 
+		DistributionFromDisk::DistributionFromDisk(string name, string folder, string partName, vector<string> attrNames, float mass) : 
 			name_m{ name }, attrNames_m{ attrNames }, mass_m{ mass }
 		{
 			size_t attrsize{ 0 };
 			for (size_t attr = 0; attr < attrNames.size(); attr++)
 			{
-				vector<double> read;
+				vector<float> read;
 				fileIO::readDblBin(read, folder + "/" + partName + "_" + attrNames.at(attr) + ".bin");
 				data_m.push_back(read);
 				if (attrNames_m.at(attr).size() > attrsize) { attrsize = attrNames_m.at(attr).size(); }
@@ -35,8 +35,8 @@ namespace utils
 				std::cout << data_m.at(iii).at(at) << ((iii != data_m.size() - 1) ? ", " : "");
 			std::cout << std::endl;
 
-			vector<double> E{ { 0.0 } };
-			vector<degrees> Pitch{ { 0.0 } };
+			vector<float> E{ { 0.0f } };
+			vector<degrees> Pitch{ { 0.0f } };
 			numerical::v2DtoEPitch({ data_m.at(0).at(at) }, { data_m.at(1).at(at) }, mass_m, E, Pitch);
 			std::cout << "E, Pitch: " << E.at(0) << ", " << Pitch.at(0) << "\n";
 		}
@@ -51,7 +51,7 @@ namespace utils
 				datasize = ((data_m.size() < other.data().size()) ? (data_m.size()) : (other.data().size()));
 			}
 
-			vector<double> err(datasize);
+			vector<float> err(datasize);
 			for (size_t attr = 0; attr < datasize; attr++)
 			{
 				err.at(attr) = std::abs((data_m.at(attr).at(at) - other.data().at(attr).at(at)) / data_m.at(attr).at(at));
@@ -76,7 +76,7 @@ namespace utils
 			for (auto attr = data_m.begin(); attr < data_m.end(); attr++)
 			{
 				for (auto part = (*attr).begin(); part < (*attr).end(); part++)
-					if ((*part) == 0.0) { zeroes.at(attr - data_m.begin())++; }
+					if ((*part) == 0.0f) { zeroes.at(attr - data_m.begin())++; }
 			}
 			
 			if (print)
@@ -90,7 +90,7 @@ namespace utils
 
 		void DistributionFromDisk::compare(const DistributionFromDisk& other) const
 		{
-			const vector<vector<double>>& data_other{ other.data() };
+			const vector<vector<float>>& data_other{ other.data() };
 			int datasize{ (int)data_m.size() };
 			if (data_m.size() != data_other.size())
 			{
@@ -104,10 +104,10 @@ namespace utils
 			zeroes(zeroes_this, false);
 			other.zeroes(zeroes_other, false);
 
-			vector<double> mean_this;
-			vector<double> mean_other;
-			vector<double> stdDev_this;
-			vector<double> stdDev_other;
+			vector<float> mean_this;
+			vector<float> mean_other;
+			vector<float> stdDev_this;
+			vector<float> stdDev_other;
 
 			for (int iii = 0; iii < datasize; iii++)
 			{
@@ -118,9 +118,9 @@ namespace utils
 			}
 
 			vector<int> notsame(datasize);
-			vector<double> avgErr(datasize);
-			vector<double> minErr(datasize);
-			vector<double> maxErr(datasize);
+			vector<float> avgErr(datasize);
+			vector<float> minErr(datasize);
+			vector<float> maxErr(datasize);
 			for (int attr = 0; attr < datasize; attr++)
 			{
 				int partsize{ (int)data_m.at(attr).size() };
@@ -130,7 +130,7 @@ namespace utils
 				{
 					if (data_m.at(attr).at(part) != data_other.at(attr).at(part))
 					{
-						double err{ std::abs((data_m.at(attr).at(part) - data_other.at(attr).at(part)) / data_m.at(attr).at(part)) };
+						float err{ std::abs((data_m.at(attr).at(part) - data_other.at(attr).at(part)) / data_m.at(attr).at(part)) };
 						if (minErr.at(attr) > err) { minErr.at(attr) = err; }
 						if (maxErr.at(attr) < err) { maxErr.at(attr) = err; }
 						avgErr.at(attr) = (avgErr.at(attr) * notsame.at(attr) + err) / (notsame.at(attr) + 1);

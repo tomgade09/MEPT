@@ -10,9 +10,9 @@ class DipoleBLUT : public BModel
 {
 protected:
 	//specified variables
-	degrees ILAT_m{ 0.0 };
-	meters  ds_msmt_m{ 0.0 };
-	meters  ds_gradB_m{ 0.0 };
+	degrees ILAT_m{ 0.0f };
+	meters  ds_msmt_m{ 0.0f };
+	meters  ds_gradB_m{ 0.0f };
 
 	#ifndef __CUDA_ARCH__ //host code
 	std::vector<meters> altitude_m;
@@ -23,8 +23,8 @@ protected:
 	float* altitude_d{ nullptr }; //serves as device-side C-style vector equivalent, and on host, pointer to this on dev
 	float* magnitude_d{ nullptr };
 	
-	meters  simMin_m{ 0.0 };
-	meters  simMax_m{ 0.0 };
+	meters  simMin_m{ 0.0f };
+	meters  simMax_m{ 0.0f };
 	int     numMsmts_m{ 0 }; //used instead of size() because vectors aren't implemented on device
 
 	bool useGPU_m{ true };
@@ -44,7 +44,7 @@ public:
 	__host__            degrees ILAT() const;
 
 	__host__ __device__ tesla   getBFieldAtS(const meters s, const seconds t) const override;
-	__host__ __device__ double  getGradBAtS(const meters s, const seconds t) const override;
+	__host__ __device__ float  getGradBAtS(const meters s, const seconds t) const override;
 	__host__ __device__ meters  getSAtAlt(const meters alt_fromRe) const override;
 
     __device__          void    setAltArray(float* altArray);
@@ -53,7 +53,7 @@ public:
 	__host__            ratio   getErrTol() const;
 	__host__            meters  getds()     const;
 
-	__host__            vector<double> getAllAttributes() const override;
+	__host__            vector<float> getAllAttributes() const override;
 	__host__            void           serialize(ofstream& out) const override;
 };
 

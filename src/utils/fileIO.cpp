@@ -15,7 +15,7 @@ namespace utils
 {
 	namespace fileIO
 	{
-		DLLEXP void readDblBin(vector<double>& arrayToReadInto, string filename)
+		DLLEXP void readDblBin(vector<float>& arrayToReadInto, string filename)
 		{
 			std::ifstream binFile{ filename, std::ios::binary };
 			if (!binFile.is_open())
@@ -32,7 +32,7 @@ namespace utils
 			readDblBin(arrayToReadInto, filename, length);
 		}
 
-		DLLEXP void readDblBin(vector<double>& arrayToReadInto, string filename, size_t numOfDblsToRead)
+		DLLEXP void readDblBin(vector<float>& arrayToReadInto, string filename, size_t numOfDblsToRead)
 		{
 			if (arrayToReadInto.size() < numOfDblsToRead)
 				throw std::invalid_argument("fileIO::readDblBin: vector is not big enough to contain the data being read from file " + filename);
@@ -48,16 +48,16 @@ namespace utils
 			if (length < numOfDblsToRead * 8)
 			{
 				binFile.close();
-				throw std::invalid_argument("fileIO::readDblBin: filesize of \"" + filename + "\" is smaller than specified number of doubles to read");
+				throw std::invalid_argument("fileIO::readDblBin: filesize of \"" + filename + "\" is smaller than specified number of floats to read");
 			}
 			if (length > numOfDblsToRead * 8)
 				std::cerr << "fileIO::readDblBin: warning: size of data read is less than the size of all data in file " << filename << ": continuing" << std::endl;
 
-			binFile.read(reinterpret_cast<char*>(arrayToReadInto.data()), std::streamsize(numOfDblsToRead * sizeof(double)));
+			binFile.read(reinterpret_cast<char*>(arrayToReadInto.data()), std::streamsize(numOfDblsToRead * sizeof(float)));
 			binFile.close();
 		}
 
-		DLLEXP void read2DCSV(vector<vector<double>>& array2DToReadInto, string filename, size_t numofentries, size_t numofcols, const char delim)
+		DLLEXP void read2DCSV(vector<vector<float>>& array2DToReadInto, string filename, size_t numofentries, size_t numofcols, const char delim)
 		{
 			std::ifstream csv{ filename };
 			if (!csv.is_open())
@@ -119,7 +119,7 @@ namespace utils
 
 
 		//write functions
-		DLLEXP void writeDblBin(const vector<double>& dataarray, string filename, size_t numelements, bool overwrite)//overwrite defaults to true
+		DLLEXP void writeDblBin(const vector<float>& dataarray, string filename, size_t numelements, bool overwrite)//overwrite defaults to true
 		{
 			std::ofstream binfile{ filename, std::ios::binary | (overwrite ? (std::ios::trunc) : (std::ios::app)) };
 			if (!binfile.is_open())
@@ -127,14 +127,14 @@ namespace utils
 			if (dataarray.size() < numelements)
 			{
 				binfile.close();
-				throw std::invalid_argument("fileIO::writeDblBin: size of data vector is less than the number of doubles requested from it for filename " + filename);
+				throw std::invalid_argument("fileIO::writeDblBin: size of data vector is less than the number of floats requested from it for filename " + filename);
 			}
 
-			binfile.write(reinterpret_cast<const char*>(dataarray.data()), std::streamsize(numelements * sizeof(double)));
+			binfile.write(reinterpret_cast<const char*>(dataarray.data()), std::streamsize(numelements * sizeof(float)));
 			binfile.close();
 		}
 
-		DLLEXP void write2DCSV(const vector<vector<double>>& dataarray, string filename, size_t numofentries, size_t numofcols, const char delim, bool overwrite, int precision)//overwrite defaults to true, precision to 20
+		DLLEXP void write2DCSV(const vector<vector<float>>& dataarray, string filename, size_t numofentries, size_t numofcols, const char delim, bool overwrite, int precision)//overwrite defaults to true, precision to 20
 		{
 			std::ofstream csv(filename, overwrite ? (std::ios::trunc) : (std::ios::app));
 			if (!csv.is_open())
@@ -142,7 +142,7 @@ namespace utils
 			if (dataarray.size() < numofcols)
 			{
 				csv.close();
-				throw std::invalid_argument("fileIO::write2DCSV: size of data vector is less than the doubles requested from it for filename " + filename);
+				throw std::invalid_argument("fileIO::write2DCSV: size of data vector is less than the floats requested from it for filename " + filename);
 			}
 
 			for (size_t iii = 0; iii < numofentries; iii++)

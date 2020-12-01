@@ -29,39 +29,39 @@ using std::stringstream;
 constexpr int  BLOCKSIZE{ 256 }; //Number of threads per block
 
 //Commonly used values
-extern const int SIMCHARSIZE{ 3 * sizeof(double) };
+extern const int SIMCHARSIZE{ 3 * sizeof(float) };
 
 namespace physics
 {
-	__global__ void vperpMuConvert_d(double** dataToConvert, BModel** BModel, double mass, bool vperpToMu, int timeInd = 4)
+	__global__ void vperpMuConvert_d(float** dataToConvert, BModel** BModel, float mass, bool vperpToMu, int timeInd = 4)
 	{//dataToConvert[0] = vpara, [1] = vperp, [2] = s, [3] = t_incident, [4] = t_escape
 		unsigned int thdInd{ blockIdx.x * blockDim.x + threadIdx.x };
 		
-		if (dataToConvert[1][thdInd] != 0.0)
+		if (dataToConvert[1][thdInd] != 0.0f)
 		{
-			double B_s{ (*BModel)->getBFieldAtS(dataToConvert[2][thdInd], dataToConvert[timeInd][thdInd]) };
+			float B_s{ (*BModel)->getBFieldAtS(dataToConvert[2][thdInd], dataToConvert[timeInd][thdInd]) };
 			if (vperpToMu)
-				dataToConvert[1][thdInd] = 0.5 * mass * dataToConvert[1][thdInd] * dataToConvert[1][thdInd] / B_s;
+				dataToConvert[1][thdInd] = 0.5f * mass * dataToConvert[1][thdInd] * dataToConvert[1][thdInd] / B_s;
 			else
 				dataToConvert[1][thdInd] = sqrt(2 * dataToConvert[1][thdInd] * B_s / mass);
 		}
 	}
 
-	__host__ void vperpMuConvert(const double vpara, double* vperpOrMu, const double s, const double t_convert, BModel* BModel, const double mass, const bool vperpToMu)
+	__host__ void vperpMuConvert(const float vpara, float* vperpOrMu, const float s, const float t_convert, BModel* BModel, const float mass, const bool vperpToMu)
 	{//dataToConvert[0] = vpara, [1] = vperp, [2] = s, [3] = t_incident, [4] = t_escape
-		if (*vperpOrMu != 0.0)
+		if (*vperpOrMu != 0.0f)
 		{
-			double B_s{ BModel->getBFieldAtS(s, t_convert) };
+			float B_s{ BModel->getBFieldAtS(s, t_convert) };
 			if (vperpToMu)
-				*vperpOrMu = 0.5 * mass * (*vperpOrMu) * (*vperpOrMu) / B_s;
+				*vperpOrMu = 0.5f * mass * (*vperpOrMu) * (*vperpOrMu) / B_s;
 			else
 				*vperpOrMu = sqrt(2 * (*vperpOrMu) * B_s / mass);
 		}
 	}
 
-	__device__ __host__ double accel1dCUDA(const double vs_RK, const double t_RK, const double* args, BModel** bmodel, EField* efield) //made to pass into 1D Fourth Order Runge Kutta code
+	__device__ __host__ float accel1dCUDA(const float vs_RK, const float t_RK, const float* args, BModel** bmodel, EField* efield) //made to pass into 1D Fourth Order Runge Kutta code
 	{//args array: [s_0, mu, q, m, simtime]
-		double F_lor, F_mir, stmp;
+		float F_lor, F_mir, stmp;
 		stmp = args[0] + vs_RK * t_RK; //ps_0 + vs_RK * t_RK
 
 		//Mirror force
@@ -73,12 +73,12 @@ namespace physics
 		return (F_lor + F_mir) / args[3];
 	}//returns an acceleration in the parallel direction to the B Field
 
-	__device__ __host__ double foRungeKuttaCUDA(const double y_0, const double h, const double* funcArg, BModel** bmodel, EField* efield)
+	__device__ __host__ float foRungeKuttaCUDA(const float y_0, const float h, const float* funcArg, BModel** bmodel, EField* efield)
 	{
 		// dy / dt = f(t, y), y(t_0) = y_0
 		// funcArgs are whatever you need to pass to the equation
 		// args array: [s_0, mu, q, m, simtime]
-		double k1, k2, k3, k4; double y{ y_0 }; double t_RK{ 0.0 };
+		float k1, k2, k3, k4; float y{ y_0 }; float t_RK{ 0.0f };
 		
 		k1 = accel1dCUDA(y, t_RK, funcArg, bmodel, efield); //k1 = f(t_n, y_n), returns units of dy / dt
 
@@ -96,7 +96,7 @@ namespace physics
 		return (k1 + 2 * k2 + 2 * k3 + k4) * h / 6; //returns delta y, not dy / dt, not total y
 	}
 
-	__global__ void simActiveCheck(double** currData_d, bool* simDone)
+	__global__ void simActiveCheck(float** currData_d, bool* simDone)
 	{
 		//Answers the question: Are there no particles left in the simulation?
 		//stores the value to simDone, which is defaulted to true, and flipped to false
@@ -104,29 +104,29 @@ namespace physics
 		//(in that case, the sim is not completely done iterating)
 		if (*simDone)
 		{
-			const double* t_escape_d{ currData_d[4] }; //const double* t_incident_d{ currData_d[3] }; //to be implemented
+			const float* t_escape_d{ currData_d[4] }; //const float* t_incident_d{ currData_d[3] }; //to be implemented
 
 			unsigned int thdInd{ blockIdx.x * blockDim.x + threadIdx.x };
 
-			if (t_escape_d[thdInd] >= 0.0) //particle has escaped the sim
+			if (t_escape_d[thdInd] >= 0.0f) //particle has escaped the sim
 				return;
 			else
 				(*simDone) = false;
 		}
 	}
 
-	__global__ void iterateParticle(double** currData_d, BModel** bmodel, EField* efield,
-		const double simtime, const double dt, const double mass, const double charge, const double simmin, const double simmax)
+	__global__ void iterateParticle(float** currData_d, BModel** bmodel, EField* efield,
+		const float simtime, const float dt, const float mass, const float charge, const float simmin, const float simmax)
 	{
 		unsigned int thdInd{ blockIdx.x * blockDim.x + threadIdx.x };
 
-		double* s_d{ currData_d[2] };
-		const double* t_incident_d{ currData_d[3] };
-		double* t_escape_d{ currData_d[4] };
-		double* s0_d{ currData_d[5] };
-		double* v0_d{ currData_d[6] };
+		float* s_d{ currData_d[2] };
+		const float* t_incident_d{ currData_d[3] };
+		float* t_escape_d{ currData_d[4] };
+		float* s0_d{ currData_d[5] };
+		float* v0_d{ currData_d[6] };
 
-		if (t_escape_d[thdInd] >= 0.0) //particle has escaped, t_escape is >= 0 iff it has both entered previously and is currently outside the sim boundaries
+		if (t_escape_d[thdInd] >= 0.0f) //particle has escaped, t_escape is >= 0 iff it has both entered previously and is currently outside the sim boundaries
 			return;
 		else if (t_incident_d[thdInd] > simtime) //particle hasn't "entered the sim" yet
 			return;
@@ -141,11 +141,11 @@ namespace physics
 			return;
 		}
 
-		double* v_d{ currData_d[0] }; //these aren't needed if any of the above conditions is true
-		const double* mu_d{ currData_d[1] };
+		float* v_d{ currData_d[0] }; //these aren't needed if any of the above conditions is true
+		const float* mu_d{ currData_d[1] };
 
 		//args array: [ps_0, mu, q, m, simtime]
-		const double args[]{ s_d[thdInd], mu_d[thdInd], charge, mass, simtime };
+		const float args[]{ s_d[thdInd], mu_d[thdInd], charge, mass, simtime };
 
 		//foRK (plus v0 in this case) gives v at the next time step (indicated vf in this note):
 		//for downgoing (as an example), due to the mirror force, vf will be lower than v0 as the mirror force is acting in the opposite direction as v
@@ -159,11 +159,11 @@ namespace physics
 		s_d[thdInd] += (v_d[thdInd] + v0_d[thdInd]) / 2 * dt;
 	}
 
-	__host__ void iterateParticle(double* vpara, double* mu, double* s, double* t_incident, double* t_escape, BModel* bmodel, EField* efield,
-		const double simtime, const double dt, const double mass, const double charge, const double simmin, const double simmax)
+	__host__ void iterateParticle(float* vpara, float* mu, float* s, float* t_incident, float* t_escape, BModel* bmodel, EField* efield,
+		const float simtime, const float dt, const float mass, const float charge, const float simmin, const float simmax)
 	{
-		if (simtime == 0.0) { *t_escape = -1.0; }
-		if (*t_escape >= 0.0) //see above function for description of conditions
+		if (simtime == 0.0f) { *t_escape = -1.0f; }
+		if (*t_escape >= 0.0f) //see above function for description of conditions
 			return;
 		else if (*t_incident > simtime)
 			return;
@@ -178,9 +178,9 @@ namespace physics
 			return;
 		}
 
-		const double args[]{ *s, *mu, charge, mass, simtime };
+		const float args[]{ *s, *mu, charge, mass, simtime };
 
-		double v_orig{ *vpara };
+		float v_orig{ *vpara };
 		*vpara += foRungeKuttaCUDA(*vpara, dt, args, &bmodel, efield);
 		*s += (*vpara + v_orig) / 2 * dt;
 	}
@@ -270,7 +270,7 @@ void Simulation::iterateSimulation(size_t numberOfIterations, size_t checkDoneEv
 				//{
 					//size_t free, total;
 					//cudaMemGetInfo(&free, &total);
-					//cout << "cuda mem: free: " << static_cast<double>(free)/1024.0/1024.0/1024.0 << "GB, total: " << static_cast<double>(total)/1024.0/1024.0/1024.0 << "GB\n";
+					//cout << "cuda mem: free: " << static_cast<float>(free)/1024.0f/1024.0f/1024.0f << "GB, total: " << static_cast<float>(total)/1024.0/1024.0/1024.0 << "GB\n";
 				//}
 
 				string loopStatus;
@@ -317,7 +317,7 @@ void Simulation::iterateSimulation(size_t numberOfIterations, size_t checkDoneEv
 
 	saveReady_m = true;
 	saveDataToDisk();
-	simTime_m = 0.0;
+	simTime_m = 0.0f;
 
 	cout << "Total sim time: " << Log_m->timeElapsedTotal_s() << " s" << endl;
 

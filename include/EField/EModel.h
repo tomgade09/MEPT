@@ -49,7 +49,7 @@ public:
 	__host__            EModel** this_dev() const;
 	__host__            string name() const;
 
-	__host__            virtual vector<double> getAllAttributes() const = 0;
+	__host__            virtual vector<float> getAllAttributes() const = 0;
 	__host__            virtual void serialize(ofstream& out) const = 0;
 };
 

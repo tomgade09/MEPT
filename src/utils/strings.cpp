@@ -57,10 +57,10 @@ namespace utils
 			return ret;
 		}
 
-		DLLEXP vector<double> strToDblVec(string str, const char delim) //delim defaults to ','
+		DLLEXP vector<float> strToDblVec(string str, const char delim) //delim defaults to ','
 		{
 			vector<string> strVec{ strToStrVec(str, delim) };
-			vector<double> ret;
+			vector<float> ret;
 
 			if (strVec.size() == 0)
 				return ret;

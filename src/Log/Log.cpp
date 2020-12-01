@@ -34,7 +34,7 @@ void Log::saveEntry(const Entry& ent)
 	{
 		if (!entry.write_m) return;
 
-		duration<double, std::nano> dur = entry.time_m - entries_m.at(0).time_m;
+		duration<float, std::nano> dur = entry.time_m - entries_m.at(0).time_m;
 
 		string writeTxt;
 		stringstream timess;
@@ -114,13 +114,13 @@ size_t Log::createEntry(string label, bool write)
 	return entries_m.size() - 1;
 }
 
-double Log::timeElapsedTotal_s() const
+float Log::timeElapsedTotal_s() const
 {
 	return timeElapsedSinceEntry_s(0);
 }
 
-double Log::timeElapsedSinceEntry_s(size_t index) const
+float Log::timeElapsedSinceEntry_s(size_t index) const
 {
-	duration<double, std::nano> elapsed = steady_clock::now() - entries_m.at(index).time_m;
-	return elapsed.count() / 1000000000.0; //convert to s
+	duration<float, std::nano> elapsed = steady_clock::now() - entries_m.at(index).time_m;
+	return elapsed.count() / 1000000000.0f; //convert to s
 }

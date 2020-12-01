@@ -10,9 +10,9 @@ using std::invalid_argument;
 using namespace utils::fileIO::serialize;
 
 
-vector<double> DipoleBLUT::getAllAttributes() const
+vector<float> DipoleBLUT::getAllAttributes() const
 {
-	vector<double> ret{ ILAT_m, ds_msmt_m, ds_gradB_m, simMin_m, simMax_m, static_cast<double>(numMsmts_m) };
+	vector<float> ret{ ILAT_m, ds_msmt_m, ds_gradB_m, simMin_m, simMax_m, static_cast<float>(numMsmts_m) };
 	
 	for (size_t iii = 0; iii < altitude_m.size(); iii++)
 		ret.push_back(altitude_m.at(iii));
@@ -30,7 +30,7 @@ void DipoleBLUT::serialize(ofstream& out) const
 	};
 
 	// ======== write data to file ======== //
-	writeStrBuf(serializeDoubleVector(getAllAttributes()));
+	writeStrBuf(serializeFloatVector(getAllAttributes()));
 	writeStrBuf(serializeFloatVector(altitude_m));
 	writeStrBuf(serializeFloatVector(magnitude_m));
 	out.write(reinterpret_cast<const char*>(&numMsmts_m), sizeof(int));
@@ -39,7 +39,7 @@ void DipoleBLUT::serialize(ofstream& out) const
 
 void DipoleBLUT::deserialize(ifstream& in)
 {
-	vector<double> attrs{ deserializeDoubleVector(in) };
+	vector<float> attrs{ deserializeFloatVector(in) };
 	ILAT_m = attrs.at(0);
 	ds_msmt_m = attrs.at(1);
 	ds_gradB_m = attrs.at(2);

@@ -6,7 +6,7 @@
 
 using std::string;
 
-constexpr double B0{ 3.12e-5 }; //B_0 for Earth dipole B model
+constexpr float B0{ 3.12e-5f }; //B_0 for Earth dipole B model
 
 //setup CUDA kernels
 namespace DipoleB_d
@@ -73,18 +73,18 @@ __host__ degrees DipoleB::ILAT() const
 
 __host__ __device__ meters DipoleB::getSAtLambda(const degrees lambda) const
 {
-	//double x{ asinh(sqrt(3.0) * sinpi(lambdaDegrees / 180.0)) }; //asinh triggers an odd cuda 8.x bug that is resolved in 9.x+
-	double sinh_x{ sqrt(3.0) * sinpi(lambda / 180.0) };
-	double x{ log(sinh_x + sqrt(sinh_x * sinh_x + 1)) }; //trig identity for asinh - a bit faster - asinh(x) == ln(x + sqrt(x*x + 1))
+	//float x{ asinh(sqrt(3.0) * sinpi(lambdaDegrees / 180.0)) }; //asinh triggers an odd cuda 8.x bug that is resolved in 9.x+
+	float sinh_x{ sqrt(3.0f) * sinpi(lambda / 180.0f) };
+	float x{ log(sinh_x + sqrt(sinh_x * sinh_x + 1)) }; //trig identity for asinh - a bit faster - asinh(x) == ln(x + sqrt(x*x + 1))
 
-	return (0.5 * L_m / sqrt(3.0)) * (x + 0.25 * (exp(2.0*x)-exp(-2.0*x))); /* L */ //0.25 * (exp(2*x)-exp(-2*x)) == sinh(x) * cosh(x) and is faster
+	return (0.5f * L_m / sqrt(3.0f)) * (x + 0.25f * (exp(2.0f*x)-exp(-2.0f*x))); /* L */ //0.25 * (exp(2*x)-exp(-2*x)) == sinh(x) * cosh(x) and is faster
 }
 
 __host__ __device__ degrees DipoleB::getLambdaAtS(const meters s) const
 {
 	double lambda_tmp{ (-ILAT_m / s_max_m) * s + ILAT_m }; //-ILAT / s_max * s + ILAT
 	double  s_tmp{ s_max_m - getSAtLambda(lambda_tmp) };
-	double dlambda{ 1.0 };
+	double dlambda{ 1.0f };
 	bool    over{ 0 };
 
 	while (abs((s_tmp - s) / s) > lambdaErrorTolerance_m)
@@ -107,9 +107,9 @@ __host__ __device__ degrees DipoleB::getLambdaAtS(const meters s) const
 					break;
 			}
 		}
-		if (dlambda < lambdaErrorTolerance_m / 100.0)
+		if (dlambda < lambdaErrorTolerance_m / 100.0f)
 			break;
-		dlambda /= 5.0; //through trial and error, this reduces the number of calculations usually (compared with 2, 2.5, 3, 4, 10)
+		dlambda /= 5.0f; //through trial and error, this reduces the number of calculations usually (compared with 2, 2.5, 3, 4, 10)
 	}
 
 	return (degrees)lambda_tmp;
@@ -118,12 +118,12 @@ __host__ __device__ degrees DipoleB::getLambdaAtS(const meters s) const
 __host__ __device__ tesla DipoleB::getBFieldAtS(const meters s, const seconds simtime) const
 {// consts: [ ILATDeg, L, L_norm, s_max, ds, lambdaErrorTolerance ]
 	degrees lambda{ getLambdaAtS(s) };
-	meters  rnorm{ L_norm_m * cospif(lambda / 180.0) * cospif(lambda / 180.0) };
+	meters  rnorm{ L_norm_m * cospif(lambda / 180.0f) * cospif(lambda / 180.0f) };
 
-	return -B0 / (rnorm * rnorm * rnorm) * sqrtf(1.0 + 3 * sinpif(lambda / 180.0) * sinpif(lambda / 180.0));
+	return -B0 / (rnorm * rnorm * rnorm) * sqrtf(1.0f + 3 * sinpif(lambda / 180.0f) * sinpif(lambda / 180.0f));
 }
 
-__host__ __device__ double DipoleB::getGradBAtS(const meters s, const seconds simtime) const
+__host__ __device__ float DipoleB::getGradBAtS(const meters s, const seconds simtime) const
 {
 	return (getBFieldAtS(s + ds_m, simtime) - getBFieldAtS(s - ds_m, simtime)) / (2 * ds_m);
 }

@@ -48,8 +48,8 @@ public:
 
 	size_t createEntry(string message, bool write = true);
 	
-	double timeElapsedTotal_s() const;
-	double timeElapsedSinceEntry_s(size_t index) const;
+	float timeElapsedTotal_s() const;
+	float timeElapsedSinceEntry_s(size_t index) const;
 };
 
 #endif

@@ -38,7 +38,7 @@ public:
 	__host__ const vector<meters>& altMax() const;
 	__host__ const vector<Vperm>&  magnitude() const;
 	
-	__host__ vector<double> getAllAttributes() const override;
+	__host__ vector<float> getAllAttributes() const override;
 	__host__ void serialize(ofstream& out) const override;
 };
 

@@ -7,7 +7,7 @@ namespace utils
 {
 	namespace random
 	{
-		void generateNormallyDistributedValues(double mean, double sigma, std::vector<double>& arrayOut);
+		void generateNormallyDistributedValues(float mean, float sigma, std::vector<float>& arrayOut);
 	}
 }
 

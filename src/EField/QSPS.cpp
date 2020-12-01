@@ -8,9 +8,9 @@ using std::to_string;
 using std::invalid_argument;
 using namespace utils::fileIO::serialize;
 
-vector<double> QSPS::getAllAttributes() const
+vector<float> QSPS::getAllAttributes() const
 {
-	vector<double> ret;
+	vector<float> ret;
 	for (size_t iii = 0; iii < altMin_m.size(); iii++)
 	{//vectors are guaranteed to be the same size
 		ret.push_back(altMin_m.at(iii));
@@ -31,7 +31,7 @@ void QSPS::serialize(ofstream& out) const
 	// ======== write data to file ======== //
 	writeStrBuf(serializeFloatVector(altMin_m));
 	writeStrBuf(serializeFloatVector(altMax_m));
-	writeStrBuf(serializeDoubleVector(magnitude_m));
+	writeStrBuf(serializeFloatVector(magnitude_m));
 	out.write(reinterpret_cast<const char*>(&useGPU_m), sizeof(bool));
 }
 
@@ -39,6 +39,6 @@ void QSPS::deserialize(ifstream& in)
 {
 	altMin_m = deserializeFloatVector(in);
 	altMax_m = deserializeFloatVector(in);
-	magnitude_m = deserializeDoubleVector(in);
+	magnitude_m = deserializeFloatVector(in);
 	in.read(reinterpret_cast<char*>(&useGPU_m), sizeof(bool));
 }

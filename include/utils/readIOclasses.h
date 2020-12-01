@@ -18,15 +18,15 @@ namespace utils
 		private:
 			string name_m;
 			vector<string> attrNames_m;
-			vector<vector<double>> data_m;
-			double mass_m;
+			vector<vector<float>> data_m;
+			float mass_m;
 
 
 		public:
-			DistributionFromDisk(string name, string folder, string partName, vector<string> attrNames, double mass);
+			DistributionFromDisk(string name, string folder, string partName, vector<string> attrNames, float mass);
 			~DistributionFromDisk() {}
 
-			const vector<vector<double>>& data() const { return data_m; }
+			const vector<vector<float>>& data() const { return data_m; }
 			const string& name() const { return name_m; }
 			void print(int at) const;
 			void printdiff(DistributionFromDisk& other, int at) const;

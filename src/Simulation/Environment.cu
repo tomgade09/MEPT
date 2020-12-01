@@ -67,7 +67,7 @@ void SEn::taskSplit()
 
 	auto gpuBlockAlignedTaskSize = [](int numOfElements, int maxThreadsPerBlock, int devSpeed, int totalSpeed)
 	{
-		double elemCnt{ 1.0 * numOfElements * devSpeed / totalSpeed };
+		float elemCnt{ 1.0f * numOfElements * devSpeed / totalSpeed };
 		int ret{ (int)round(elemCnt / maxThreadsPerBlock) * maxThreadsPerBlock };
 
 		return ret;

@@ -14,7 +14,7 @@ using namespace utils::fileIO::serialize;
 
 namespace QSPS_d
 {
-	__global__ void setupEnvironment_d(EModel** qsps, meters* altMin, meters* altMax, double* magnitude, int numRegions)
+	__global__ void setupEnvironment_d(EModel** qsps, meters* altMin, meters* altMax, float* magnitude, int numRegions)
 	{
 		ZEROTH_THREAD_ONLY((*qsps) = new QSPS(altMin, altMax, magnitude, numRegions)); //this overloaded constructor is only compiled in the case where __CUDA_ARCH__ is defined
 	}
@@ -36,7 +36,7 @@ __host__ const vector<meters>& QSPS::altMax() const
 	return altMax_m;
 }
 
-__host__ const vector<double>& QSPS::magnitude() const 
+__host__ const vector<float>& QSPS::magnitude() const 
 {
 	return magnitude_m;
 }
@@ -54,7 +54,7 @@ __host__ QSPS::QSPS(meters altMin, meters altMax, Vperm magnitude, int stepUpReg
 	//this avoids a "hard edge" to the QSPS, potentially leading to errors
 	if (stepUpRegions != 0)
 	{
-		constexpr ratio suSize{ 0.05 }; //use step up regions = 5% of QSPS size (arbitrary)
+		constexpr ratio suSize{ 0.05f }; //use step up regions = 5% of QSPS size (arbitrary)
 
 		altMin_m.resize(2 * stepUpRegions + 1); //step up regions on either side of the QSPS, as well as the QSPS itself
 		altMax_m.resize(2 * stepUpRegions + 1);
@@ -143,5 +143,5 @@ __host__ __device__ Vperm QSPS::getEFieldAtS(const meters s, const seconds t) co
 	}
 	#endif /* !__CUDA_ARCH__ */
 
-	return 0.0;
+	return 0.0f;
 }

@@ -65,8 +65,8 @@ inline bool operator==(const BModel& x, const BModel& y)
 			return false;
 
 		if (!(
-			(x.getBFieldAtS(4.0e6, 0.0) == y.getBFieldAtS(4.0e6, 0.0)) &&
-			(x.getGradBAtS(4.0e6, 0.0) == y.getGradBAtS(4.0e6, 0.0))
+			(x.getBFieldAtS(4.0e6f, 0.0f) == y.getBFieldAtS(4.0e6f, 0.0f)) &&
+			(x.getGradBAtS(4.0e6f, 0.0f) == y.getGradBAtS(4.0e6f, 0.0f))
 			))
 			return false;
 	}

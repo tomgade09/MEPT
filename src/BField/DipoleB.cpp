@@ -7,7 +7,7 @@ using std::cerr;
 using std::string;
 using namespace utils::fileIO::serialize;
 
-vector<double> DipoleB::getAllAttributes() const
+vector<float> DipoleB::getAllAttributes() const
 {
 	return { L_m, L_norm_m, s_max_m, ILAT_m, ds_m, lambdaErrorTolerance_m };
 }
@@ -20,13 +20,13 @@ void DipoleB::serialize(ofstream& out) const
 	};
 
 	// ======== write data to file ======== //
-	writeStrBuf(serializeDoubleVector(getAllAttributes()));
+	writeStrBuf(serializeFloatVector(getAllAttributes()));
 	out.write(reinterpret_cast<const char*>(&useGPU_m), sizeof(bool));
 }
 
 void DipoleB::deserialize(ifstream& in)
 {
-	vector<double> attrs{ deserializeDoubleVector(in) };
+	vector<float> attrs{ deserializeFloatVector(in) };
 	L_m = attrs.at(0);
 	L_norm_m = attrs.at(1);
 	s_max_m = attrs.at(2);

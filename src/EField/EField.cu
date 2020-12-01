@@ -213,7 +213,7 @@ __host__ EField* EField::this_dev() const
 
 __host__ __device__ Vperm EField::getEFieldAtS(const meters s, const seconds t) const
 {
-	tesla ret{ 0.0 };
+	tesla ret{ 0.0f };
 
 	#ifndef __CUDA_ARCH__ //host code
 	for (auto& elem : emodels_m) //vector of unique_ptr<EModel>'s

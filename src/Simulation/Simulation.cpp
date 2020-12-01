@@ -27,7 +27,7 @@ using std::filesystem::create_directory;
 
 using namespace utils::fileIO::serialize;
 
-Simulation::Simulation(double dt, double simMin, double simMax) :
+Simulation::Simulation(float dt, float simMin, float simMax) :
 	dt_m{ dt }, simMin_m{ simMin }, simMax_m{ simMax }
 {
 	//generate a folder for output data in {ROOT}/_dataout
@@ -111,22 +111,22 @@ void Simulation::incTime()
 //
 //======== Simulation Access Functions ========//
 //
-double Simulation::simtime() const
+float Simulation::simtime() const
 {
 	return simTime_m;
 }
 
-double Simulation::dt() const
+float Simulation::dt() const
 {
 	return dt_m;
 }
 
-double Simulation::simMin() const
+float Simulation::simMin() const
 {
 	return simMin_m;
 }
 
-double Simulation::simMax() const
+float Simulation::simMax() const
 {
 	return simMax_m;
 }
@@ -221,14 +221,14 @@ Log* Simulation::getLog()
 
 
 //Simulation data
-const vector<vector<double>>& Simulation::getParticleData(size_t partInd, bool originalData)
+const vector<vector<float>>& Simulation::getParticleData(size_t partInd, bool originalData)
 {
 	if (partInd > (particles_m.size() - 1))
 		throw out_of_range("Simulation::getParticleData: no particle at the specifed index " + to_string(partInd));
 	return ((originalData) ? (particles_m.at(partInd)->data(true)) : (particles_m.at(partInd)->data(false)));
 }
 
-const vector<vector<double>>& Simulation::getSatelliteData(size_t satInd)
+const vector<vector<float>>& Simulation::getSatelliteData(size_t satInd)
 {
 	if (satInd > (satPartPairs_m.size() - 1))
 		throw out_of_range("Simulation::getSatelliteData: no satellite at the specifed index " + to_string(satInd));
@@ -236,12 +236,12 @@ const vector<vector<double>>& Simulation::getSatelliteData(size_t satInd)
 }
 
 //Fields data
-double Simulation::getBFieldAtS(double s, double time) const
+float Simulation::getBFieldAtS(float s, float time) const
 {
 	return BFieldModel_m->getBFieldAtS(s, time);
 }
 
-double Simulation::getEFieldAtS(double s, double time) const
+float Simulation::getEFieldAtS(float s, float time) const
 {
 	return EFieldModel_m->getEFieldAtS(s, time);
 }
@@ -250,7 +250,7 @@ double Simulation::getEFieldAtS(double s, double time) const
 //
 //======== Class Creation Functions ========//
 //
-void Simulation::createParticlesType(string name, double mass, double charge, size_t numParts, string loadFilesDir, bool save)
+void Simulation::createParticlesType(string name, float mass, float charge, size_t numParts, string loadFilesDir, bool save)
 {
 	for (size_t part = 0; part < particles_m.size(); part++)
 		if (name == particles_m.at(part).get()->name())
@@ -277,11 +277,11 @@ void Simulation::createParticlesType(string name, double mass, double charge, si
 	if (loadFilesDir != "")
 		newPart->loadDataFromDisk(loadFilesDir);
 
-	newPart->__data(true).at(4) = vector<double>(newPart->getNumberOfParticles(), -1.0); //sets t_esc to -1.0 - i.e. particles haven't escaped yet
+	newPart->__data(true).at(4) = vector<float>(newPart->getNumberOfParticles(), -1.0f); //sets t_esc to -1.0 - i.e. particles haven't escaped yet
 	particles_m.push_back(move(newPart));
 }
 
-void Simulation::createTempSat(string partName, double altitude, bool upwardFacing, string name)
+void Simulation::createTempSat(string partName, float altitude, bool upwardFacing, string name)
 {
 	for (size_t partInd = 0; partInd < particles_m.size(); partInd++)
 	{
@@ -294,7 +294,7 @@ void Simulation::createTempSat(string partName, double altitude, bool upwardFaci
 	throw invalid_argument("Simulation::createTempSat: no particle of name " + name);
 }
 
-void Simulation::createTempSat(size_t partInd, double altitude, bool upwardFacing, string name)
+void Simulation::createTempSat(size_t partInd, float altitude, bool upwardFacing, string name)
 {//"Temp Sats" are necessary to ensure particles are created before their accompanying satellites
 	if (initialized_m)
 		throw runtime_error("Simulation::createTempSat: initializeSimulation has already been called, no satellite will be created of name " + name);
@@ -307,7 +307,7 @@ void Simulation::createTempSat(size_t partInd, double altitude, bool upwardFacin
 void Simulation::createSatellite(TempSat* tmpsat, bool save) //protected
 {
 	size_t partInd{ tmpsat->particleInd };
-	double altitude{ tmpsat->altitude };
+	float altitude{ tmpsat->altitude };
 	bool upwardFacing{ tmpsat->upwardFacing };
 	string name{ tmpsat->name };
 
@@ -325,7 +325,7 @@ void Simulation::createSatellite(TempSat* tmpsat, bool save) //protected
 	satPartPairs_m.push_back(make_unique<SatandPart>(move(sat), move(part)));
 }
 
-void Simulation::setBFieldModel(string name, vector<double> args, bool save)
+void Simulation::setBFieldModel(string name, vector<float> args, bool save)
 {//add log file messages
 	if (BFieldModel_m)
 		throw invalid_argument("Simulation::setBFieldModel: trying to assign B Field Model when one is already assigned - existing: " + BFieldModel_m->name() + ", attempted: " + name);
@@ -374,7 +374,7 @@ void Simulation::setBFieldModel(unique_ptr<BModel> BModelptr)
 	BFieldModel_m = std::move(BModelptr);
 }
 
-void Simulation::addEFieldModel(string name, vector<double> args, bool save)
+void Simulation::addEFieldModel(string name, vector<float> args, bool save)
 {
 	if (EFieldModel_m == nullptr)
 		EFieldModel_m = make_unique<EField>();
@@ -472,11 +472,11 @@ void Simulation::saveSimulation() const
 		out.write(sb.str().c_str(), sb.str().length());
 	};
 
-	out.write(reinterpret_cast<const char*>(&dt_m), sizeof(double));
-	out.write(reinterpret_cast<const char*>(&simMin_m), sizeof(double));
-	out.write(reinterpret_cast<const char*>(&simMax_m), sizeof(double));
+	out.write(reinterpret_cast<const char*>(&dt_m), sizeof(float));
+	out.write(reinterpret_cast<const char*>(&simMin_m), sizeof(float));
+	out.write(reinterpret_cast<const char*>(&simMax_m), sizeof(float));
 	writeStrBuf(serializeString(saveRootDir_m));
-	out.write(reinterpret_cast<const char*>(&simTime_m), sizeof(double));
+	out.write(reinterpret_cast<const char*>(&simTime_m), sizeof(float));
 	
 	//Write BField
 	Component comp{ Component::BField };
@@ -523,11 +523,11 @@ void Simulation::loadSimulation(string saveRootDir)
 	ifstream in(filename, std::ifstream::binary);
 	if (!in) throw invalid_argument(__func__ + string(": unable to open file: ") + filename);
 	
-	in.read(reinterpret_cast<char*>(&dt_m), sizeof(double));
-	in.read(reinterpret_cast<char*>(&simMin_m), sizeof(double));
-	in.read(reinterpret_cast<char*>(&simMax_m), sizeof(double));
+	in.read(reinterpret_cast<char*>(&dt_m), sizeof(float));
+	in.read(reinterpret_cast<char*>(&simMin_m), sizeof(float));
+	in.read(reinterpret_cast<char*>(&simMax_m), sizeof(float));
 	/*saveRootDir_m = */deserializeString(in);
-	in.read(reinterpret_cast<char*>(&simTime_m), sizeof(double));
+	in.read(reinterpret_cast<char*>(&simTime_m), sizeof(float));
 	
 	while (true)
 	{

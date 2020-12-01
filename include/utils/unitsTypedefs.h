@@ -5,24 +5,24 @@
 
 using std::vector;
 
-typedef double eV;
-typedef double kg;
-typedef double cm;
-typedef double Vperm;
+typedef float eV;
+typedef float kg;
+typedef float cm;
+typedef float Vperm;
 typedef float tesla;
-typedef double ratio;
-typedef double mpers;
-typedef double percm3;
+typedef float ratio;
+typedef float mpers;
+typedef float percm3;
 typedef float meters;
-typedef double dNflux;
-typedef double dEflux;
+typedef float dNflux;
+typedef float dEflux;
 typedef float degrees;
-typedef double coulomb;
-typedef double percent;
-typedef double seconds;
+typedef float coulomb;
+typedef float percent;
+typedef float seconds;
 typedef vector<dNflux> dNflux_v1D;
 typedef vector<dEflux> dEflux_v1D;
-typedef vector<double> double_v1D;
-typedef vector<vector<double>> double_v2D;
+typedef vector<float> float_v1D;
+typedef vector<vector<float>> float_v2D;
 
 #endif

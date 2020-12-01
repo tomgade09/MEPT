@@ -13,8 +13,8 @@ using std::ifstream;
 using std::ofstream;
 
 #define STRVEC vector<string>
-#define DBL2DV vector<vector<double>>
-#define DBL3DV vector<vector<vector<double>>>
+#define DBL2DV vector<vector<float>>
+#define DBL3DV vector<vector<vector<float>>>
 
 class Satellite
 {
@@ -22,16 +22,16 @@ protected:
 	string name_m;
 	STRVEC attributeNames_m;
 	
-	meters altitude_m{ 0.0 };
+	meters altitude_m{ 0.0f };
 	bool   upwardFacing_m{ false };
 	bool   initializedGPU_m{ false };
 
 	size_t numberOfParticles_m{ 0 };
 
 	DBL2DV   data_m; //[attribute][particle]
-	double*  satCaptrData1D_d{ nullptr }; //flattened satellite capture data on GPU
-	double** satCaptrData2D_d{ nullptr }; //2D satellite capture data on GPU
-	double** particleData2D_d{ nullptr };
+	float*  satCaptrData1D_d{ nullptr }; //flattened satellite capture data on GPU
+	float** satCaptrData2D_d{ nullptr }; //2D satellite capture data on GPU
+	float** particleData2D_d{ nullptr };
 
 	void   initializeGPU();
 	void   freeGPUMemory();
@@ -39,8 +39,8 @@ protected:
 	size_t getAttrIndByName(string name);
 
 public:
-	Satellite(string name, STRVEC attributeNames, meters altitude, bool upwardFacing, size_t numberOfParticles, double** partDataGPUPtr);
-	Satellite(ifstream& in, double** particleData2D);
+	Satellite(string name, STRVEC attributeNames, meters altitude, bool upwardFacing, size_t numberOfParticles, float** partDataGPUPtr);
+	Satellite(ifstream& in, float** particleData2D);
 	~Satellite();
 	Satellite(const Satellite&) = delete;
 	Satellite& operator=(const Satellite&) = delete;
@@ -51,13 +51,13 @@ public:
 	bool	      upward() const;
 	DBL2DV&       __data();
 	const DBL2DV& data() const;
-	double**      get2DDataGPUPtr() const;
-	double*       get1DDataGPUPtr() const;
+	float**      get2DDataGPUPtr() const;
+	float*       get1DDataGPUPtr() const;
 	size_t        getNumberOfAttributes() const;
 	size_t        getNumberOfParticles()  const;
 
 	//Other functions
-	void iterateDetector(double simtime, double dt, int blockSize); //increment time, track overall sim time, or take an argument??
+	void iterateDetector(float simtime, float dt, int blockSize); //increment time, track overall sim time, or take an argument??
 	void iterateDetectorCPU(const DBL2DV& particleData, seconds simtime, seconds dt);
 	void copyDataToHost(); //some sort of sim time check to verify I have iterated for the current sim time??
 	void saveDataToDisk(string folder);

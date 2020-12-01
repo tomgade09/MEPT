@@ -15,8 +15,8 @@ using std::ofstream;
 using utils::fileIO::ParticleDistribution;
 
 #define STRVEC vector<string>
-#define DBLVEC vector<double>
-#define DBL2DV vector<vector<double>>
+#define DBLVEC vector<float>
+#define DBL2DV vector<vector<float>>
 
 class Particles
 {
@@ -30,13 +30,13 @@ protected:
 	bool initDataLoaded_m{ false };
 	bool initializedGPU_m{ false }; //consider what to do with this with multi GPU - still necessary?
 
-	double mass_m;
-	double charge_m;
+	float mass_m;
+	float charge_m;
 	size_t numberOfParticles_m;
 
 	//device pointers
-	double*  currData1D_d{ nullptr }; //make vectors for handling multiple GPUs
-	double** currData2D_d{ nullptr };
+	float*  currData1D_d{ nullptr }; //make vectors for handling multiple GPUs
+	float** currData2D_d{ nullptr };
 
 	void initializeGPU(); //need to modify all of these below to account for multi GPU
 	void copyDataToGPU(bool origToGPU = true);
@@ -44,7 +44,7 @@ protected:
 	void deserialize(ifstream& in);
 
 public:
-	Particles(string name, vector<string> attributeNames, double mass, double charge, size_t numParts);
+	Particles(string name, vector<string> attributeNames, float mass, float charge, size_t numParts);
 	Particles(ifstream& in);
 	~Particles();
 	Particles(const Particles&) = delete;
@@ -55,24 +55,24 @@ public:
 	const STRVEC& attributeNames() const;
 	DBL2DV&       __data(bool orig);
 	const DBL2DV& data(bool orig) const;
-	double        mass()          const;
-	double        charge()        const;
+	float        mass()          const;
+	float        charge()        const;
 	size_t        getNumberOfAttributes() const;
 	size_t        getNumberOfParticles()  const;
 	bool          getInitDataLoaded() const;
-	double**      getCurrDataGPUPtr() const;
+	float**      getCurrDataGPUPtr() const;
 
 	size_t        getAttrIndByName(string searchName) const;
 	string        getAttrNameByInd(size_t searchIndx) const;
 
 	//Other functions
-	void setParticlesSource_s(double s_ion, double s_mag);
+	void setParticlesSource_s(float s_ion, float s_mag);
 
 	void generateDist(size_t numEbins, eV E_min, eV E_max, size_t numPAbins, degrees PA_min, degrees PA_max, meters s_ion, meters s_mag);
 	void loadDistFromPD(const ParticleDistribution& pd, meters s_ion, meters s_mag);
 	void loadDistFromPD(const ParticleDistribution& pd, vector<meters>& s);
 	void loadDistFromDisk(string folder, string distName, meters s_ion, meters s_mag);
-	void loadDataFromMem(vector<vector<double>> data, bool orig = true);
+	void loadDataFromMem(vector<vector<float>> data, bool orig = true);
 	void loadDataFromDisk(string folder, bool orig = true);
 	void saveDataToDisk(string folder, bool orig) const;
 	void copyDataToHost(); //needs to be public because Particles doesn't know when things are done modifying GPU data

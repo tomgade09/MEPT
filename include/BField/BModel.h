@@ -38,7 +38,7 @@ public:
 	__host__ __device__ BModel(const BModel&) = delete;
 
 	__host__ __device__ virtual tesla  getBFieldAtS(const meters s, const seconds t) const = 0;
-	__host__ __device__ virtual double getGradBAtS (const meters s, const seconds t) const = 0;
+	__host__ __device__ virtual float getGradBAtS (const meters s, const seconds t) const = 0;
 	__host__ __device__ virtual meters getSAtAlt(const meters alt_fromRe) const = 0;
 
 	__host__            virtual meters ILAT() const = 0;
@@ -47,7 +47,7 @@ public:
 	__host__            string name() const;
 	__host__            Type   type() const;
 
-	__host__            virtual vector<double> getAllAttributes() const = 0;
+	__host__            virtual vector<float> getAllAttributes() const = 0;
 	__host__            virtual void serialize(ofstream& out) const = 0;
 };
 

@@ -14,7 +14,7 @@ using std::string;
 using std::invalid_argument;
 using namespace utils::fileIO::serialize;
 
-constexpr double LAMBDAERRTOL{ 1.0e-10 }; //the error tolerance of DipoleB's lambda estimation
+constexpr float LAMBDAERRTOL{ 1.0e-10f }; //the error tolerance of DipoleB's lambda estimation
 
 //setup CUDA kernels
 namespace DipoleBLUT_d
@@ -75,7 +75,7 @@ __host__ __device__ DipoleBLUT::DipoleBLUT(degrees ILAT, meters simMin, meters s
 	for (int msmt = 0; msmt < numMsmts_m; msmt++)
 	{
 		altitude_m.push_back(simMin_m + msmt * ds_msmt_m);
-		magnitude_m.push_back(dip->getBFieldAtS(altitude_m.at(msmt), 0.0));
+		magnitude_m.push_back(dip->getBFieldAtS(altitude_m.at(msmt), 0.0f));
 	}
 
 	if (useGPU_m) setupEnvironment();
@@ -121,7 +121,7 @@ __host__ __device__ tesla DipoleBLUT::getBFieldAtS(const meters s, const seconds
 	#endif /* !__CUDA_ARCH__ */
 }
 
-__host__ __device__ double DipoleBLUT::getGradBAtS(const meters s, const seconds simtime) const
+__host__ __device__ float DipoleBLUT::getGradBAtS(const meters s, const seconds simtime) const
 {
 	return (getBFieldAtS(s + ds_gradB_m, simtime) - getBFieldAtS(s - ds_gradB_m, simtime)) / (2 * ds_gradB_m);
 }
@@ -129,7 +129,7 @@ __host__ __device__ double DipoleBLUT::getGradBAtS(const meters s, const seconds
 __host__ __device__ meters DipoleBLUT::getSAtAlt(const meters alt_fromRe) const
 {
 	//admittedly, this is a pretty inefficient way of doing this...but it's not used often
-	return DipoleB(ILAT_m, 1.0e-4, RADIUS_EARTH / 1000.0f, false).getSAtAlt(alt_fromRe);
+	return DipoleB(ILAT_m, 1.0e-4f, RADIUS_EARTH / 1000.0f, false).getSAtAlt(alt_fromRe);
 }
 
 __device__ void DipoleBLUT::setAltArray(float* altArray)

@@ -26,7 +26,7 @@ namespace utils
 		private:
 			string filename_m;
 			
-			vector<vector<double>> data_m;
+			vector<vector<float>> data_m;
 			STRVEC labels_m;
 			bool write_m{ true };
 
@@ -36,12 +36,12 @@ namespace utils
 			CSV(string filename);
 			~CSV();
 
-			void add(vector<double> vec, string label);
-			void add(vector<vector<double>> vecs, vector<string> labels);
+			void add(vector<float> vec, string label);
+			void add(vector<vector<float>> vecs, vector<string> labels);
 			void addspace();
 			void dontwrite();
 
-			vector<vector<double>>& data();
+			vector<vector<float>>& data();
 		};
 
 		class ParticleDistribution
@@ -54,15 +54,15 @@ namespace utils
 			STRVEC attrNames_m;
 			string particleName_m;
 			bool   write_m{ true }; //set to false if deserialized, used to prevent overwriting a valid file
-			double mass_m{ -1.0 };
+			float mass_m{ -1.0f };
 
 			vector<Range>  ranges_m;
-			vector<double> padvals_m; //pad values for each attribute (usually 0.0 or -1.0)
+			vector<float> padvals_m; //pad values for each attribute (usually 0.0 or -1.0)
 
 			void deserialize(string serialFolder, string name);
 
 		public: //generate is dependent on vpara, vperp, and s being the first three attributes - if not, this will have to be modified
-			ParticleDistribution(string saveFolder, vector<string> attrNames = { "vpara", "vperp", "s", "t_inc", "t_esc" }, string particleName = "elec", double mass = MASS_ELECTRON, vector<double> padvals = { 0.0, 0.0, 0.0, 0.0, -1.0}, bool write = true);
+			ParticleDistribution(string saveFolder, vector<string> attrNames = { "vpara", "vperp", "s", "t_inc", "t_esc" }, string particleName = "elec", float mass = MASS_ELECTRON, vector<float> padvals = { 0.0f, 0.0f, 0.0f, 0.0f, -1.0f}, bool write = true);
 			ParticleDistribution(string serialFolder, string name);
 			ParticleDistribution(const ParticleDistribution& PD);
 			~ParticleDistribution(); //writes on destruction
@@ -72,12 +72,12 @@ namespace utils
 			string saveFolder() const;
 			STRVEC attrNames() const;
 			string particleName() const;
-			double mass() const;
+			float mass() const;
 
 			void addEnergyRange(size_t energyBins, eV E_start, eV E_end, bool logE = true);
 			void addPitchRange(size_t pitchBins, degrees PA_start, degrees PA_end, bool midBin = true);
-			vector<vector<double>> generate(meters s_ion, meters s_mag) const;
-			vector<vector<double>> generate(vector<meters>& s) const;
+			vector<vector<float>> generate(meters s_ion, meters s_mag) const;
+			vector<vector<float>> generate(vector<meters>& s) const;
 			void write(meters s_ion, meters s_mag) const;
 			void write(vector<meters>& s) const;
 			void serialize() const;

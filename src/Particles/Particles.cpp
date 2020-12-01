@@ -22,11 +22,11 @@ using utils::fileIO::readDblBin;
 using utils::fileIO::writeDblBin;
 using namespace utils::fileIO::serialize;
 
-Particles::Particles(string name, vector<string> attributeNames, double mass, double charge, size_t numParts) :
+Particles::Particles(string name, vector<string> attributeNames, float mass, float charge, size_t numParts) :
 	name_m{ name }, attributeNames_m{ attributeNames }, mass_m{ mass }, charge_m{ charge }, numberOfParticles_m{ numParts }
 {
-	origData_m = vector<vector<double>>(attributeNames.size(), vector<double>(numParts));
-	currData_m = vector<vector<double>>(attributeNames.size(), vector<double>(numParts));
+	origData_m = vector<vector<float>>(attributeNames.size(), vector<float>(numParts));
+	currData_m = vector<vector<float>>(attributeNames.size(), vector<float>(numParts));
 
 	//multi-GPU: probably do like this: make this class aware of Environment, initialize on all GPUs where use_m = true with a loop or something
 	initializeGPU();
@@ -36,8 +36,8 @@ Particles::Particles(ifstream& in)
 { //for loading serialzed class
 	deserialize(in);
 
-	origData_m = vector<vector<double>>(attributeNames_m.size(), vector<double>(numberOfParticles_m));
-	currData_m = vector<vector<double>>(attributeNames_m.size(), vector<double>(numberOfParticles_m));
+	origData_m = vector<vector<float>>(attributeNames_m.size(), vector<float>(numberOfParticles_m));
+	currData_m = vector<vector<float>>(attributeNames_m.size(), vector<float>(numberOfParticles_m));
 	initializeGPU();
 }
 
@@ -91,12 +91,12 @@ void Particles::freeGPUMemory()
 
 // ================ Particles - public ================ //
 
-vector<vector<double>>& Particles::__data(bool orig)
+vector<vector<float>>& Particles::__data(bool orig)
 { //returns a non-const version of data
 	return ((orig) ? origData_m : currData_m);
 }
 
-const vector<vector<double>>& Particles::data(bool orig) const
+const vector<vector<float>>& Particles::data(bool orig) const
 { //returns a const version of data
 	return ((orig) ? origData_m : currData_m);
 }
@@ -111,12 +111,12 @@ string Particles::name() const
 	return name_m;
 }
 
-double Particles::mass() const
+float Particles::mass() const
 {
 	return mass_m;
 }
 
-double Particles::charge() const
+float Particles::charge() const
 {
 	return charge_m;
 }
@@ -136,7 +136,7 @@ bool Particles::getInitDataLoaded() const
 	return initDataLoaded_m;
 }
 
-double** Particles::getCurrDataGPUPtr() const
+float** Particles::getCurrDataGPUPtr() const
 {
 	return currData2D_d;
 }
@@ -158,7 +158,7 @@ string Particles::getAttrNameByInd(size_t searchIndx) const
 	return attributeNames_m.at(searchIndx);
 }
 
-void Particles::setParticlesSource_s(double s_ion, double s_mag)
+void Particles::setParticlesSource_s(float s_ion, float s_mag)
 {
 	cout << "Particles::setParticlesSource_s: This function is being depreciated and will be removed in a future release.\n";
 	//need to create a ParticleDistribution and load into Particles::origData_m before I get rid of this
@@ -167,12 +167,12 @@ void Particles::setParticlesSource_s(double s_ion, double s_mag)
 
 	for (size_t ind = 0; ind < origData_m.at(s_ind).size(); ind++)
 	{
-		if (origData_m.at(v_ind).at(ind) > 0.0)
+		if (origData_m.at(v_ind).at(ind) > 0.0f)
 			origData_m.at(s_ind).at(ind) = s_ion;
-		else if (origData_m.at(v_ind).at(ind) < 0.0)
+		else if (origData_m.at(v_ind).at(ind) < 0.0f)
 			origData_m.at(s_ind).at(ind) = s_mag;
 		else
-			throw std::logic_error("Particles::setParticlesSource_s: vpara value is exactly 0.0 - load data to the origData_m array first.  Aborting.  index: " + std::to_string(ind));
+			throw std::logic_error("Particles::setParticlesSource_s: vpara value is exactly 0.0f - load data to the origData_m array first.  Aborting.  index: " + std::to_string(ind));
 	}
 
 	copyDataToGPU();
@@ -184,7 +184,7 @@ void Particles::generateDist(size_t numEbins, eV E_min, eV E_max, size_t numPAbi
 		<< E_max << ", numPAbins: " << numPAbins << ", PA_min: " << PA_min << ", PA_max: " << PA_max << ", s_ion: "
 		<< s_ion << ", s_mag: " << s_mag << ")";
 
-	ParticleDistribution dist{ "./", attributeNames_m, name_m, mass_m, { 0.0, 0.0, 0.0, 0.0, -1.0 }, false };
+	ParticleDistribution dist{ "./", attributeNames_m, name_m, mass_m, { 0.0f, 0.0f, 0.0f, 0.0f, -1.0f }, false };
 	dist.addEnergyRange(numEbins, E_min, E_max);   //defaults to log spaced bins, mid bin
 	dist.addPitchRange(numPAbins, PA_min, PA_max); //defaults to linear spaced bins, mid bin
 	origData_m = dist.generate(s_ion, s_mag);
@@ -227,7 +227,7 @@ void Particles::loadDistFromDisk(string folder, string distName, meters s_ion, m
 	copyDataToGPU();
 }
 
-void Particles::loadDataFromMem(vector<vector<double>> data, bool orig) //orig defaults to true
+void Particles::loadDataFromMem(vector<vector<float>> data, bool orig) //orig defaults to true
 {
 	((orig) ? origData_m = data : currData_m = data);
 	numberOfParticles_m = ((orig) ? (int)origData_m.at(0).size() : (int)currData_m.at(0).size());
@@ -266,8 +266,8 @@ void Particles::serialize(ofstream& out) const
 	out.write(reinterpret_cast<const char*>(&initDataLoaded_m), sizeof(bool));
 	out.write(reinterpret_cast<const char*>(&initializedGPU_m), sizeof(bool));
 	out.write(reinterpret_cast<const char*>(&numberOfParticles_m), sizeof(size_t));
-	out.write(reinterpret_cast<const char*>(&mass_m), sizeof(double));
-	out.write(reinterpret_cast<const char*>(&charge_m), sizeof(double));
+	out.write(reinterpret_cast<const char*>(&mass_m), sizeof(float));
+	out.write(reinterpret_cast<const char*>(&charge_m), sizeof(float));
 }
 
 void Particles::deserialize(ifstream& in) //protected function
@@ -278,6 +278,6 @@ void Particles::deserialize(ifstream& in) //protected function
 	in.read(reinterpret_cast<char*>(&initDataLoaded_m), sizeof(bool));
 	in.read(reinterpret_cast<char*>(&initializedGPU_m), sizeof(bool));
 	in.read(reinterpret_cast<char*>(&numberOfParticles_m), sizeof(size_t));
-	in.read(reinterpret_cast<char*>(&mass_m), sizeof(double));
-	in.read(reinterpret_cast<char*>(&charge_m), sizeof(double));
+	in.read(reinterpret_cast<char*>(&mass_m), sizeof(float));
+	in.read(reinterpret_cast<char*>(&charge_m), sizeof(float));
 }

@@ -32,11 +32,11 @@ protected:
 	struct TempSat
 	{//Struct that holds data to create satellite - allows satellites to be added in any order, but ensure they are created before particles
 		size_t particleInd;
-		double altitude;
+		float altitude;
 		bool upwardFacing;
 		string name;
 
-		TempSat(size_t partInd, double alt, bool upward, string nameStr) :
+		TempSat(size_t partInd, float alt, bool upward, string nameStr) :
 			particleInd{ partInd }, altitude{ alt }, upwardFacing{ upward }, name{ nameStr } {}
 	};
 
@@ -50,11 +50,11 @@ protected:
 	};
 
 	//Simulation Characteristics
-	double dt_m{ 0.0 };
-	double simMin_m{ 0.0 };
-	double simMax_m{ 0.0 };
+	float dt_m{ 0.0f };
+	float simMin_m{ 0.0f };
+	float simMax_m{ 0.0f };
 	string saveRootDir_m{ "./" };
-	double simTime_m{ 0.0 };
+	float simTime_m{ 0.0f };
 
 	//Flags
 	bool initialized_m{ false };
@@ -78,7 +78,7 @@ protected:
 	void loadDataFromDisk();
 
 public:
-	Simulation(double dt, double simMin, double simMax);
+	Simulation(float dt, float simMin, float simMax);
 	Simulation(string saveRootDir); //for loading previous simulation data
 	virtual ~Simulation();
 
@@ -90,10 +90,10 @@ public:
 	//
 	//======== Simulation Access Functions ========//
 	//
-	double simtime() const;
-	double dt()      const;
-	double simMin()  const;
-	double simMax()  const;
+	float simtime() const;
+	float dt()      const;
+	float simMin()  const;
+	float simMax()  const;
 
 	//Class data
 	int    getNumberOfParticleTypes()         const;
@@ -115,22 +115,22 @@ public:
 	Log*	   getLog();
 
 	//Simulation data
-	const vector<vector<double>>& getParticleData(size_t partInd, bool originalData);
-	const vector<vector<double>>& getSatelliteData(size_t satInd);
+	const vector<vector<float>>& getParticleData(size_t partInd, bool originalData);
+	const vector<vector<float>>& getSatelliteData(size_t satInd);
 
 	//Fields data
-	double getBFieldAtS(double s, double time) const;
-	double getEFieldAtS(double s, double time) const;
+	float getBFieldAtS(float s, float time) const;
+	float getEFieldAtS(float s, float time) const;
 
 	//
 	//======== Class Creation Functions ========//
 	//
-	void createParticlesType(string name, double mass, double charge, size_t numParts, string loadFilesDir = "", bool save = true);
-	void createTempSat(string partName, double altitude, bool upwardFacing, string name);
-	void createTempSat(size_t partInd, double altitude, bool upwardFacing, string name);
-	void setBFieldModel(string name, vector<double> args, bool save = true);
+	void createParticlesType(string name, float mass, float charge, size_t numParts, string loadFilesDir = "", bool save = true);
+	void createTempSat(string partName, float altitude, bool upwardFacing, string name);
+	void createTempSat(size_t partInd, float altitude, bool upwardFacing, string name);
+	void setBFieldModel(string name, vector<float> args, bool save = true);
 	void setBFieldModel(unique_ptr<BModel> BModelptr);
-	void addEFieldModel(string name, vector<double> args, bool save = true);
+	void addEFieldModel(string name, vector<float> args, bool save = true);
 
 	//
 	//======== Simulation Management Functions ========//
