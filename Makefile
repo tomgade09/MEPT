@@ -1,14 +1,13 @@
 # Compiler binaries and settings
-#CC         := /home/gpulab/gnu/bin/g++
-CC         := /home/apps/common/gcc/8.2.0/bin/g++
+CC         := /home/gpulab/gnu/bin/g++
 NVCC       := /home/gpulab/cuda/cuda-11.1/bin/nvcc
 CXXFLAGS   := -std=c++17 -pedantic -O2 -fopenmp -Wall -Wno-unused-variable
-NVCFLAGS   := -std=c++14 -ccbin=$(CC) -rdc=true -O2 -gencode=arch=compute_50,code=\"sm_50,compute_50\" -x cu -m64 -cudart static -Xlinker "-fopenmp" -Wno-deprecated-gpu-targets
-LINKFLAGS  := -lcudadevrt -Xcompiler "-fopenmp" -Xlinker "-fopenmp"
+NVCFLAGS   := -std=c++14 -ccbin=$(CC) -rdc=true -O2 -gencode=arch=compute_50,code=\"sm_50,compute_50\" -x cu -m64 -cudart static -Xlinker "-fopenmp -lstdc++fs -std=c++17" -Wno-deprecated-gpu-targets
+LINKFLAGS  := -lcudadevrt -ccbin=$(CC) -Xcompiler "-fopenmp -lstdc++fs"
 
 # Build-essential directories and defines
-CUDAINC    := /usr/local/cuda/include
-CUDALIB    := /usr/local/cuda/lib64
+CUDAINC    := /home/gpulab/cuda/cuda-11.1/include
+CUDALIB    := /home/gpulab/cuda/cuda-11.1/lib64
 LIBS       := -L$(CUDALIB)
 INCS       := -I$(CUDAINC) -I./include
 SRC        := ./src
