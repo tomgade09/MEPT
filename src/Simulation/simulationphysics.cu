@@ -337,3 +337,40 @@ void Simulation::freeGPUMemory()
 
 	CUDA_API_ERRCHK(cudaProfilerStop()); //For profiling with the CUDA bundle
 }
+
+void Simulation::setupGPU()
+{
+	cudaDeviceProp devProp;
+	int gpuCount	 = 0;
+	int computeTotal = 0;
+
+	// Get total number of NVIDIA GPUs
+	if (CUDA_API_ERRCHK(cudaGetDeviceCount(&gpuCount)))
+	{
+		cout << "Error: cannot get GPU count.  Only default GPU used.  Assuming at least one CUDA capable device.\n";
+		computeSplit_m.push_back(1);
+		gpuCount_m = 1;
+		return;
+	}
+
+	// Store the count of the total number of GPUs
+	gpuCount_m = gpuCount;
+
+	// Iterate over each GPU and determine how much data it can handle
+	for (int gpu = 0; gpu < gpuCount; gpu++)
+	{
+		// Get the GPU Speed
+		CUDA_API_ERRCHK(cudaGetDeviceProperties(&devProp, gpu));
+
+		// For now speed number of multiprocessors * clock speed
+		// In future: either optimize for specific hardware create a more precise equation
+		int compute = devProp.clockRate * devProp.multiProcessorCount;
+		computeTotal += compute;
+		computeSplit_m.push_back(compute);
+	}
+	// Iterate through computeSplit and get percent ratio work each device will get
+	for (int i = 0; i < computeSplit_m.size(); ++i)
+	{
+		computeSplit_m.at(i) /= computeTotal;
+	}
+}

@@ -60,6 +60,9 @@ Simulation::Simulation(float dt, float simMin, float simMax) :
 
 	saveRootDir_m = dataout.str();
 	Log_m = make_unique<Log>(saveRootDir_m + "simulation.log");
+
+	// Setup GPU Information ( number of devices and compute capability of each device )
+	setupGPU();
 }
 
 Simulation::Simulation(string saveRootDir) : saveRootDir_m{ saveRootDir + "/" },

@@ -62,6 +62,10 @@ protected:
 	bool saveReady_m{ false };
 	bool previousSim_m{ false };
 
+	//GPU Data
+	int gpuCount_m{ 0 };
+	vector<int>computeSplit_m;
+
 	//Simulation-specific classes tracked by Simulation
 	unique_ptr<BModel>             BFieldModel_m;
 	unique_ptr<EField>             EFieldModel_m;
@@ -76,6 +80,8 @@ protected:
 	void printSimAttributes(int numberOfIterations, int itersBtwCouts, string GPUName);
 	void loadSimulation(string saveRootDir);
 	void loadDataFromDisk();
+
+	void setupGPU();
 
 public:
 	Simulation(float dt, float simMin, float simMax);
