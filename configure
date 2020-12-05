@@ -5,14 +5,19 @@ BUILD=$OUT/build
 
 echo $BUILDSUB
 
+mkdir _dataout
+
 if [ ! -d "$OUT" ]; then
-	mkdir $OUT
+    mkdir $OUT
+    echo "Created directory " $OUT
 fi
 if [ ! -d "$BUILD" ]; then
-	mkdir $BUILD
-    for fold in $(find ./src -type d | sed 's/^\.\/src\///' | tail -n+2); do
-        if [ ! -d "$BUILD/$fold" ]; then        
-            mkdir $BUILD/$fold
-        fi
-    done
+    mkdir $BUILD
+    echo "Created directory " $BUILD
 fi
+for fold in $(find ./src -type d | sed 's/^\.\/src\///' | tail -n+2); do
+    if [ ! -d "$BUILD/$fold" ]; then        
+        mkdir $BUILD/$fold
+	echo "Created directory " $BUILD/$fold
+    fi
+done
