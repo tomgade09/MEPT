@@ -223,7 +223,12 @@ BModel* Simulation::Bmodel() const
 
 EField* Simulation::Efield() const
 {
-	return EFieldModel_m.get();
+	int dev = 0;
+	#ifdef GPU
+		cudaGetDevice(&dev);
+	#endif // GPU
+
+	return EFieldModel_m.at(dev).get();
 }
 
 Log* Simulation::getLog()
@@ -260,7 +265,12 @@ float Simulation::getBFieldAtS(float s, float time) const
 
 float Simulation::getEFieldAtS(float s, float time) const
 {
-	return EFieldModel_m->getEFieldAtS(s, time);
+	int dev = 0;
+	#ifdef GPU
+	cudaGetDevice(&dev);
+	#endif // GPU
+
+	return EFieldModel_m.at(dev)->getEFieldAtS(s, time);
 }
 
 
@@ -412,8 +422,19 @@ void Simulation::setBFieldModel(unique_ptr<BModel> BModelptr)
 
 void Simulation::addEFieldModel(string name, vector<float> args, bool save)
 {
-	if (EFieldModel_m == nullptr)
-		EFieldModel_m = make_unique<EField>();
+	if (EFieldModel_m.size() == 0)
+	{
+		int dev = 0;
+		do
+		{
+			#ifdef GPU
+			cudaSetDevice(dev);
+			#endif // GPU
+
+			EFieldModel_m.push_back( make_unique<EField>() );
+			dev++;
+		} while (dev < gpuCount_m);
+	}
 	
 	vector<string> attrNames;
 
@@ -435,7 +456,15 @@ void Simulation::addEFieldModel(string name, vector<float> args, bool save)
 			attrNames.push_back("magnitude");
 		}
 		cout << "QSPS temporary fix - instantiates with [vector].at(0)\n";
-		EFieldModel_m->add(make_unique<QSPS>(altMin.at(0), altMax.at(0), mag.at(0)));
+		int dev = 0;
+		do
+		{
+			#ifdef GPU
+			cudaSetDevice(dev);
+			#endif // GPU
+			EFieldModel_m.at(dev)->add(make_unique<QSPS>(altMin.at(0), altMax.at(0), mag.at(0)));
+			dev++;
+		} while (dev < gpuCount_m);
 		Log_m->createEntry("Added QSPS");
 	}
 	else if (name == "AlfvenLUT")
@@ -492,7 +521,7 @@ void Simulation::resetSimulation(bool fields)
 			cudaSetDevice(dev);
 		#endif // GPU
 			BFieldModel_m.at(dev).reset();
-		EFieldModel_m.reset();
+			EFieldModel_m.at(dev).reset();
 			dev++;
 		} while (dev < gpuCount_m);
 	}
@@ -532,7 +561,7 @@ void Simulation::saveSimulation() const
 	//Write EField
 	comp = Component::EField;
 	out.write(reinterpret_cast<const char*>(&comp), sizeof(Component));
-	EFieldModel_m->serialize(out);
+	EFieldModel_m.at(0)->serialize(out);
 
 	//Write Log
 	//comp = Component::Log;

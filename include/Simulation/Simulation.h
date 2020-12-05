@@ -70,7 +70,7 @@ protected:
 
 	//Simulation-specific classes tracked by Simulation
 	vector<unique_ptr<BModel>>     BFieldModel_m;
-	unique_ptr<EField>             EFieldModel_m;
+	vector<unique_ptr<EField>>     EFieldModel_m;
 	unique_ptr<Log>                Log_m;
 	vector<shared_ptr<Particles>>  particles_m;
 	vector<unique_ptr<TempSat>>    tempSats_m; //holds data until the GPU data arrays are allocated, allows the user more flexibility of when to call createSatellitesAPI
