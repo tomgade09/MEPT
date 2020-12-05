@@ -38,7 +38,7 @@ Environment::Environment(int numOfElements) : numOfElements_m{ numOfElements }
 
 	cudaSetDevice(0);
 
-	taskSplit(); //not as efficient as I would like...
+	//taskSplit(); //not as efficient as I would like...
 				 //splits tasks evenly between all devices (which default to use_m = true)
 				 //later if/when the user decides to manually add speeds calculated themselves
 				 //(which should be done for now), this leads to taskSplit() being called twice
@@ -115,7 +115,7 @@ void Env::useCPU(bool use, size_t cpunum) //cpunum default = 0
 	cpus_m.at(cpunum).use_m = false;  return;
 	
 	cpus_m.at(cpunum).use_m = use;
-	taskSplit();
+	//taskSplit();
 }
 
 void Env::useGPU(bool use, size_t gpunum) //gpunum default = 0
@@ -128,7 +128,7 @@ void Env::useGPU(bool use, size_t gpunum) //gpunum default = 0
 	}
 	
 	gpus_m.at(gpunum).use_m = use;
-	taskSplit();
+	//taskSplit();
 }
 
 void Env::setSpeed(const vector<int>& cpuspd, const vector<int>& gpuspd)
@@ -151,7 +151,7 @@ void Env::setSpeed(const vector<int>& cpuspd, const vector<int>& gpuspd)
 	for (int i = 0; i < cpus_m.size(); i++)
 		cpus_m.at(i).speed_m = cpuspd.at(i);
 
-	taskSplit();
+	//taskSplit();
 }
 
 void Env::setBlockSize(size_t blocksize, size_t gpu)
@@ -333,3 +333,11 @@ void EnG::setBlockSize(int blocksize)
 int EnG::speed() const { return speed_m; }
 bool EnG::use()  const { return use_m; }
 cDP EnG::props() const { return gpuProps_m; }
+
+//int EnG::getPaddedSize(int dev, int partCount)
+int Environment::getPaddedSize(int dev, int partCount)
+{
+	int computeCapability = 1;// stored in vect normally at dev
+	int paddedSize = ceil( ( ceil( (float)partCount * computeCapability ) ) / 256 );
+	return paddedSize;
+}

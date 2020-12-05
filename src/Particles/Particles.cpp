@@ -175,9 +175,10 @@ bool Particles::getInitDataLoaded() const
 	return initDataLoaded_m;
 }
 
+//float** Particles::getCurrDataGPUPtr() const
 float** Particles::getCurrDataGPUPtr() const
 {
-	return currData2D_d;
+	return currData2D_d.at(0);
 }
 
 size_t Particles::getAttrIndByName(string searchName) const

@@ -32,7 +32,7 @@ namespace utils
 			int activedev{ -1 };
 			cudaGetDeviceCount(&numdevs);
 			cudaGetDevice(&activedev);
-			int dnumInt{ static_cast<size_t>(devNum) };
+			int dnumInt{ static_cast<int>(devNum) };
 			
 			if (dnumInt >= numdevs || dnumInt < 0)
 				clog << "Invalid device number " << dnumInt << ".  Number of devices " << numdevs << ".  Using default device.";

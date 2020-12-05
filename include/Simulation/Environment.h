@@ -2,6 +2,7 @@
 #define ENVIRONMENT_SIMULATION_H
 
 #include <vector>
+#include "cuda_runtime.h"
 
 using std::vector;
 
@@ -16,10 +17,11 @@ private:
 	vector<CPU> cpus_m;
 	vector<GPU> gpus_m;
 
-	void taskSplit();
+	int numOfElements_m;
 
 public:
 	Environment();
+	Environment( int numOfElements );
 
 	void useCPU(bool use, size_t cpunum = 0);
 	void useGPU(bool use, size_t gpunum = 0);
@@ -34,6 +36,8 @@ public:
 
 	CPU getCPU(int cpuind) const;
 	GPU getGPU(int gpuind) const;
+	int getPaddedSize(int dev, int partCount);
+
 };
 
 class Environment::CPU

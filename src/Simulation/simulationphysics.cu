@@ -253,7 +253,7 @@ void Simulation::iterateSimulation(size_t numberOfIterations, size_t checkDoneEv
 		for (auto part = particles_m.begin(); part < particles_m.end(); part++)
 		{
 			iterateParticle <<< (*part)->getNumberOfParticles() / BLOCKSIZE, BLOCKSIZE >>> ((*part)->getCurrDataGPUPtr(), BFieldModel_m->this_dev(), EFieldModel_m->this_dev(),
-				simTime_m, dt_m, (*part)->mass(), (*part)->charge(), simMin_m, simMax_m);
+				simTime_m, dt_m, (*part)->mass(), (*part)->charge(), simMin_m, simMax_m, (*part)->getNumberOfParticles());
 			
 			//kernel will set boolean to false if at least one particle is still in sim
 			if (cudaloopind % checkDoneEvery == 0)
