@@ -16,6 +16,8 @@ using std::vector;
 using std::unique_ptr;
 using std::shared_ptr;
 
+#define GPU true// For Now this will tell the compiler to compile .cuda in .cpp files
+
 class Simulation
 {
 protected:
@@ -67,7 +69,7 @@ protected:
 	vector<int>computeSplit_m;
 
 	//Simulation-specific classes tracked by Simulation
-	unique_ptr<BModel>             BFieldModel_m;
+	vector<unique_ptr<BModel>>     BFieldModel_m;
 	unique_ptr<EField>             EFieldModel_m;
 	unique_ptr<Log>                Log_m;
 	vector<shared_ptr<Particles>>  particles_m;

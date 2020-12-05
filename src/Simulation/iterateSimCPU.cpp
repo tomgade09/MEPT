@@ -45,7 +45,7 @@ void Simulation::__iterateSimCPU(size_t numberOfIterations, size_t checkDoneEver
 		#pragma omp parallel for
 		for (int ind = 0; ind < static_cast<int>((*part)->getNumberOfParticles()); ind++)
 		{//convert vperp to mu in Particles memory
-			vperpMuConvert(data.at(0).at(ind), &data.at(1).at(ind), data.at(2).at(ind), data.at(4).at(ind), BFieldModel_m.get(), (*part)->mass(), true);
+			vperpMuConvert(data.at(0).at(ind), &data.at(1).at(ind), data.at(2).at(ind), data.at(4).at(ind), BFieldModel_m.at(0).get(), (*part)->mass(), true);
 		}
 	}
 
@@ -62,7 +62,7 @@ void Simulation::__iterateSimCPU(size_t numberOfIterations, size_t checkDoneEver
 			for (int ind = 0; ind < static_cast<int>((*part)->getNumberOfParticles()); ind++)
 			{
 				iterateParticle(&data.at(0).at(ind), &data.at(1).at(ind), &data.at(2).at(ind), &data.at(3).at(ind), &data.at(4).at(ind),
-					BFieldModel_m.get(), EFieldModel_m.get(), simTime_m, dt_m, (*part)->mass(), (*part)->charge(), simMin_m, simMax_m);
+					BFieldModel_m.at(0).get(), EFieldModel_m.get(), simTime_m, dt_m, (*part)->mass(), (*part)->charge(), simMin_m, simMax_m);
 				if ((cudaloopind % checkDoneEvery == 0) && done && (data.at(4).at(ind) < 0.0f))
 				{
 					//#pragma omp atomic
@@ -104,7 +104,7 @@ void Simulation::__iterateSimCPU(size_t numberOfIterations, size_t checkDoneEver
 		vector<vector<float>> tmp{ (*part)->data(false) };
 		for (size_t ind = 0; ind < (*part)->getNumberOfParticles(); ind++)
 		{//convert mu to vperp in Particles memory
-			vperpMuConvert(tmp.at(0).at(ind), &tmp.at(1).at(ind), tmp.at(2).at(ind), tmp.at(4).at(ind), BFieldModel_m.get(), (*part)->mass(), false);
+			vperpMuConvert(tmp.at(0).at(ind), &tmp.at(1).at(ind), tmp.at(2).at(ind), tmp.at(4).at(ind), BFieldModel_m.at(0).get(), (*part)->mass(), false);
 		}
 		(*part)->loadDataFromMem(tmp, false);
 	}
