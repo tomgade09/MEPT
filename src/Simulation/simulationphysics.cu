@@ -274,8 +274,12 @@ void Simulation::iterateSimulation(size_t numberOfIterations, size_t checkDoneEv
 
 		CUDA_KERNEL_ERRCHK_WSYNC_WABORT(); //side effect: cudaDeviceSynchronize() needed for computeKernel to function properly, which this macro provides
 
-		for (auto sat = satPartPairs_m.begin(); sat < satPartPairs_m.end(); sat++)
-			(*sat)->satellite->iterateDetector(simTime_m, dt_m, BLOCKSIZE);
+		for (auto sat = satPartPairs_m.begin(); sat < satPartPairs_m.end(); sat += gpuCount_m)
+		{
+			cudaSetDevice(devNumb);
+
+			(*(sat + devNumb))->satellite->iterateDetector(simTime_m, dt_m, BLOCKSIZE);
+		}
 		
 		if (cudaloopind % checkDoneEvery == 0)
 		{
@@ -322,8 +326,11 @@ void Simulation::iterateSimulation(size_t numberOfIterations, size_t checkDoneEv
 	for (auto part = particles_m.begin(); part < particles_m.end(); part++)
 		vperpMuConvert_d <<< (*part)->getNumberOfParticles() / BLOCKSIZE, BLOCKSIZE >>> ((*part)->getCurrDataGPUPtr(), BFieldModel_m.at(devNumb)->this_dev(), (*part)->mass(), false); //nullptr will need to be changed if B ever becomes time dependent, would require loop to record when it stops tracking the particle
 
-	for (auto sat = satPartPairs_m.begin(); sat < satPartPairs_m.end(); sat++)
-		vperpMuConvert_d <<< (*sat)->particle->getNumberOfParticles() / BLOCKSIZE, BLOCKSIZE >>>  ((*sat)->satellite->get2DDataGPUPtr(), BFieldModel_m.at(devNumb)->this_dev(), (*sat)->particle->mass(), false, 3);
+	for (auto sat = satPartPairs_m.begin(); sat < satPartPairs_m.end(); sat += gpuCount_m)
+	{
+		cudaSetDevice(devNumb);
+		vperpMuConvert_d <<< (*(sat + devNumb))->particle->getNumberOfParticles() / BLOCKSIZE, BLOCKSIZE >>>  ((*sat)->satellite->get2DDataGPUPtr(), BFieldModel_m.at(devNumb)->this_dev(), (*sat)->particle->mass(), false, 3);
+	}
 
 	//Copy data back to host
 	LOOP_OVER_1D_ARRAY(getNumberOfParticleTypes(), particles_m.at(iii)->copyDataToHost());
