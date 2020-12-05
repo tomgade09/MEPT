@@ -9,10 +9,10 @@ namespace utils
 {
 	namespace GPU
 	{
-		void setup2DArray(float** data1D_d, float*** data2D_d, size_t outerDim, size_t innerDim);
-		void copy2DArray(vector<vector<float>>& data, float** data1D_d, bool hostToDev);
-		void free2DArray(float** data1D_d, float*** data2D_d);
-		void getGPUMemInfo(size_t* free, size_t* total, int GPUidx);
+		void setup2DArray(float** data1D_d, float*** data2D_d, size_t outerDim, size_t innerDim, size_t devNum = 0);
+		void copy2DArray(vector<vector<float>>& data, float** data1D_d, bool hostToDev, size_t devNum = 0);
+		void free2DArray(float** data1D_d, float*** data2D_d, size_t devNum = 0);
+		void getGPUMemInfo(size_t* free, size_t* total, size_t devNum = 0);
 		void getCurrGPUMemInfo(size_t* free, size_t* total);
 	}
 }

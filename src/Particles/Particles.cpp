@@ -49,7 +49,13 @@ Particles::~Particles()
 // ================ Particles - protected ================ //
 void Particles::initializeGPU()
 {
-	utils::GPU::setup2DArray(&currData1D_d, &currData2D_d, attributeNames_m.size() + 2, numberOfParticles_m);
+	for (size_t i = 0; i < env->numGPUs(); i++)
+	{
+		currData1D_d.push_back(nullptr);
+		currData2D_d.push_back(nullptr);
+		utils::GPU::setup2DArray(&currData1D_d.at(i), &currData2D_d.at(i), attributeNames_m.size() + 2,
+			env->getPaddedSize(i, numberOfParticles_m), env->getCUDAGPUInd(i));
+	}
 	initializedGPU_m = true;
 }
 
@@ -60,8 +66,28 @@ void Particles::copyDataToGPU(bool origToGPU)
 	if (!initDataLoaded_m)
 		throw logic_error("Particles::copyDataToGPU: data not loaded from disk with Particles::loadDataFromDisk or generated with Particles::generateRandomParticles " + name_m);
 
-	if (origToGPU) utils::GPU::copy2DArray(origData_m, &currData1D_d, true); //sending to orig(host) -> data(GPU)
-	else           utils::GPU::copy2DArray(currData_m, &currData1D_d, true); //sending to curr(host) -> data(GPU)
+	auto getsubvec = [](vector<vector<float>> vec, size_t offset, size_t end)
+	{
+		vector<vector<float>> subvec(vec.size());
+		for (size_t attr = 0; attr < vec.size(); attr++)
+			subvec.at(attr) =
+				vector<float>(vec.at(attr).begin() + offset, vec.at(attr).begin() + end);
+		return subvec;
+	};
+	
+	size_t offset{ 0 };
+	for (size_t i = 0; i < env->numGPUs(); i++)
+	{
+		size_t end{ offset + env->getBlockAlignedSize(i, numberOfParticles_m) };
+		size_t cind{ env->getCUDAGPUInd(i) };  //the index of the GPU in CUDA
+		
+		if (origToGPU)
+			utils::GPU::copy2DArray(getsubvec(origData_m, offset, end), &currData1D_d.at(i), true, cind); //sending to orig(host) -> data(GPU)
+		else
+			utils::GPU::copy2DArray(getsubvec(currData_m, offset, end), &currData1D_d.at(i), true, cind); //sending to curr(host) -> data(GPU)
+
+		offset = end;
+	}
 }
 
 void Particles::copyDataToHost()
@@ -69,14 +95,27 @@ void Particles::copyDataToHost()
 	if (!initializedGPU_m)
 		throw logic_error("Particles::copyDataToHost: GPU memory has not been initialized yet for particle " + name_m);
 
-	utils::GPU::copy2DArray(currData_m, &currData1D_d, false); //coming back data(GPU) -> curr(host)
+	size_t offset{ 0 };
+	for (size_t i = 0; i < env->numGPUs(); i++)
+	{
+		size_t end{ offset + env->getBlockAlignedSize(i, numberOfParticles_m) };
+		size_t cind{ env->getCUDAGPUInd(i) };  //the index of the GPU in CUDA
+		vector<vector<float>> subvec(currData_m.size(), vector<float>(end - offset));
+
+		utils::GPU::copy2DArray(subvec, &currData1D_d.at(i), false, cind); //coming back data(GPU) -> curr(host)
+		for (int i = 0; i < subvec.size(); i++)
+			std::copy(subvec.at(i).begin(), subvec.at(i).end(), currData_m.at(i).begin() + offset);  //add data back at the appropriate location
+		
+		offset = end;
+	}
 }
 
 void Particles::freeGPUMemory()
 {
 	if (!initializedGPU_m) return;
 
-	utils::GPU::free2DArray(&currData1D_d, &currData2D_d);
+	for (size_t i = 0; i < env->numGPUs(); i++)
+		utils::GPU::free2DArray(&currData1D_d.at(i), &currData2D_d.at(i));
 	
 	initializedGPU_m = false;
 }

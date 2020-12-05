@@ -116,10 +116,12 @@ namespace physics
 	}
 
 	__global__ void iterateParticle(float** currData_d, BModel** bmodel, EField* efield,
-		const float simtime, const float dt, const float mass, const float charge, const float simmin, const float simmax)
+		const float simtime, const float dt, const float mass, const float charge, const float simmin, const float simmax, int len)
 	{
 		unsigned int thdInd{ blockIdx.x * blockDim.x + threadIdx.x };
 
+		if (thdInd >= len) return;
+		
 		float* s_d{ currData_d[2] };
 		const float* t_incident_d{ currData_d[3] };
 		float* t_escape_d{ currData_d[4] };

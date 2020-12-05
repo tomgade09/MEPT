@@ -4,7 +4,7 @@
 #include <vector>
 #include <string>
 
-#include "dlldefines.h"
+#include "Simulation/Environment.h"
 #include "utils/unitsTypedefs.h"
 #include "utils/writeIOclasses.h"
 
@@ -20,7 +20,7 @@ using utils::fileIO::ParticleDistribution;
 
 class Particles
 {
-protected:
+protected:	
 	string name_m; //name of particle
 
 	STRVEC attributeNames_m;
@@ -34,9 +34,11 @@ protected:
 	float charge_m;
 	size_t numberOfParticles_m;
 
+	Environment* env;
+	
 	//device pointers
-	float*  currData1D_d{ nullptr }; //make vectors for handling multiple GPUs
-	float** currData2D_d{ nullptr };
+	vector<float*>  currData1D_d;
+	vector<float**> currData2D_d;
 
 	void initializeGPU(); //need to modify all of these below to account for multi GPU
 	void copyDataToGPU(bool origToGPU = true);

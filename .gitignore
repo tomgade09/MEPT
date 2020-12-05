@@ -41,6 +41,8 @@
 *.opendb
 *.db
 *.pdb
+*.iobj
+*.ipdb
 # *.sln
 # *.vcxproj
 #*.filters

@@ -1,22 +1,24 @@
 #include <omp.h>
+#include <string>
 #include "Simulation/Environment.h"
 #include "ErrorHandling/cudaErrorCheck.h"
 
 #define cDP cudaDeviceProp
-#define SEn Simulation::Environment
-#define SEC Simulation::Environment::CPU
-#define SEG Simulation::Environment::GPU
+#define Env Environment
+#define EnC Environment::CPU
+#define EnG Environment::GPU
 
 using std::cout;
 using std::cerr;
 using std::string;
+using std::to_string;
 using std::exception;
 using std::logic_error;
 
 //
 // ================ Environment ================ //
 //
-Simulation::Environment::Environment(int numOfElements) : numOfElements_m{ numOfElements }
+Environment::Environment(int numOfElements) : numOfElements_m{ numOfElements }
 {
 	cpus_m.push_back(CPU());
 
@@ -49,7 +51,7 @@ Simulation::Environment::Environment(int numOfElements) : numOfElements_m{ numOf
 }
 
 // ---------------- Environment::Private ---------------- //
-void SEn::taskSplit()
+/*void Env::taskSplit()  //removed in favor of getBlockAlignedSize
 {
 	for (auto& elem : gpus_m)
 		if (elem.use_m && elem.speed_m == 0) elem.speedTest();
@@ -98,10 +100,10 @@ void SEn::taskSplit()
 		cerr << "Diff   : " << elemDiff << "\n";
 		cpus_m.back().dataEndIdx_m = numOfElements_m - 1;
 	}
-}
+}*/
 
 // ---------------- Environment::Public ---------------- //
-void SEn::useCPU(bool use, size_t cpunum) //cpunum default = 0
+void Env::useCPU(bool use, size_t cpunum) //cpunum default = 0
 {
 	if (cpunum < cpus_m.size() - 1)
 	{
@@ -109,13 +111,14 @@ void SEn::useCPU(bool use, size_t cpunum) //cpunum default = 0
 		//cerr << "Some Logged Error\n";
 		return;
 	}
-
-	if (cpus_m.at(cpunum).use_m == use) return;
+	cout << "CPU use alongside GPU not implemented yet\n";
+	cpus_m.at(cpunum).use_m = false;  return;
+	
 	cpus_m.at(cpunum).use_m = use;
 	taskSplit();
 }
 
-void SEn::useGPU(bool use, size_t gpunum) //gpunum default = 0
+void Env::useGPU(bool use, size_t gpunum) //gpunum default = 0
 {
 	if (gpunum < gpus_m.size() - 1)
 	{
@@ -123,13 +126,12 @@ void SEn::useGPU(bool use, size_t gpunum) //gpunum default = 0
 		//cerr << "Some Logged Error\n";
 		return;
 	}
-
-	if (cpus_m.at(gpunum).use_m == use) return;
+	
 	gpus_m.at(gpunum).use_m = use;
 	taskSplit();
 }
 
-void SEn::setSpeed(const vector<int>& cpuspd, const vector<int>& gpuspd)
+void Env::setSpeed(const vector<int>& cpuspd, const vector<int>& gpuspd)
 {
 	if (gpuspd.size() != gpus_m.size())
 	{
@@ -152,7 +154,7 @@ void SEn::setSpeed(const vector<int>& cpuspd, const vector<int>& gpuspd)
 	taskSplit();
 }
 
-void SEn::setBlockSize(int blocksize, int gpu)
+void Env::setBlockSize(size_t blocksize, size_t gpu)
 {
 	try
 	{
@@ -165,10 +167,62 @@ void SEn::setBlockSize(int blocksize, int gpu)
 	}
 }
 
-size_t SEn::numCPUs() const { return cpus_m.size(); }
-size_t SEn::numGPUs() const { return gpus_m.size(); }
+size_t Env::getBlockAlignedSize(size_t gpuind, size_t totalNumber)
+{
+	return totalNumber;
 
-int SEn::gpuBlockSize(int gpu) const
+	//the below is not complete yet - returning total number to allow for single GPU use
+	float sumspeed{ 0.0 };
+	for (const auto& gpu : gpus_m)
+		sumspeed += (gpu.use() ? static_cast<float>(gpu.speed()) : 0.0);
+
+	vector<size_t> counts;
+	size_t idx{ 0 };
+	for (const auto& gpu : gpus_m)
+	{
+		if (gpu.use())
+		{
+			float pct{ static_cast<float>(gpu.speed()) / sumspeed };
+			size_t elems{ static_cast<size_t>(pct * static_cast<float>(totalNumber)) };
+			counts.push_back( (elems / gpu.blockSize_m + 
+				((elems % gpu.blockSize_m) ? 1 : 0)) * gpu.blockSize_m);
+		}
+	}
+
+	size_t sum{ 0 };
+	for (const auto& count : counts)
+		sum += count;
+
+	size_t diff{ 0 };
+	if (sum < totalNumber)
+	{
+		diff = totalNumber - sum;
+		
+	}
+
+	
+	return 0;
+}
+
+size_t Env::getCUDAGPUInd(size_t gpuind)
+{
+	size_t activeind{ 0 };
+	for (const auto& gpu : gpus_m)
+	{
+		if (gpu.use())
+		{
+			if (activeind == gpuind) return gpu.devnum_m;
+			activeind++;
+		}
+	}
+
+	cerr << "Environment::getCUDAGPUInd: gpuind " + to_string(gpuind) + " not valid.  Using default (0)";
+}
+
+size_t Env::numCPUs() const { return cpus_m.size(); }
+size_t Env::numGPUs() const { return gpus_m.size(); }
+
+int Env::gpuBlockSize(int gpu) const
 {
 	try
 	{
@@ -182,7 +236,7 @@ int SEn::gpuBlockSize(int gpu) const
 	return 0;
 }
 
-SEC SEn::getCPU(int cpuind) const
+EnC Env::getCPU(int cpuind) const
 {
 	try
 	{
@@ -196,7 +250,7 @@ SEC SEn::getCPU(int cpuind) const
 	}
 }
 
-SEG SEn::getGPU(int gpuind) const
+EnG Env::getGPU(int gpuind) const
 {
 	try
 	{
@@ -215,30 +269,30 @@ SEG SEn::getGPU(int gpuind) const
 // ================ Environment::CPU ================ //
 //
 
-Simulation::Environment::CPU::CPU() : numberThreads_m{ omp_get_num_threads() }
+Environment::CPU::CPU() : numberThreads_m{ omp_get_num_threads() }
 {
 	speedTest();
 }
 
 // ---------------- Environment::CPU::Private ---------------- //
-void SEC::speedTest()
+void EnC::speedTest()
 {
 	if (speed_m == 0)
 		speed_m = 1; //a robust speed test not yet implemented - for now, set all speeds equal
 }
 
 // ---------------- Environment::CPU::Public ---------------- //
-int SEC::start() const { return dataStartIdx_m; }
-int SEC::end()   const { return dataEndIdx_m; }
-int SEC::speed() const { return speed_m; }
-bool SEC::use()  const { return use_m; }
-int SEC::cores() const { return numberThreads_m; }
+int EnC::start() const { return dataStartIdx_m; }
+int EnC::end()   const { return dataEndIdx_m; }
+int EnC::speed() const { return speed_m; }
+bool EnC::use()  const { return use_m; }
+int EnC::cores() const { return numberThreads_m; }
 
 //
 // ================ Environment::GPU ================ //
 //
 
-Simulation::Environment::GPU::GPU()
+Environment::GPU::GPU()
 {
 	if (CUDA_API_ERRCHK(cudaGetDevice(&devnum_m)))
 	{
@@ -256,13 +310,13 @@ Simulation::Environment::GPU::GPU()
 }
 
 // ---------------- Environment::GPU::Private ---------------- //
-void SEG::speedTest()
+void EnG::speedTest()
 {
-	if (speed_m == 0)
-		speed_m = 1; //a robust speed test not yet implemented - for now, set all speeds equal
+	if (speed_m == 0)      //for now speed == clock rate in khz * MP count
+		speed_m = gpuProps_m.clockRate / 1024 * gpuProps_m.multiProcessorCount;
 }
 
-void SEG::setBlockSize(int blocksize)
+void EnG::setBlockSize(int blocksize)
 {
 	if (blocksize <= 0)
 		throw logic_error("Environment::GPU::setBlockSize: Invalid blocksize: blocksize is less than or equal to 0.  \
@@ -276,8 +330,6 @@ void SEG::setBlockSize(int blocksize)
 }
 
 // ---------------- Environment::GPU::Public ---------------- //
-int SEG::start() const { return dataStartIdx_m; }
-int SEG::end()   const { return dataEndIdx_m; }
-int SEG::speed() const { return speed_m; }
-bool SEG::use()  const { return use_m; }
-cDP SEG::props() const { return gpuProps_m; }
+int EnG::speed() const { return speed_m; }
+bool EnG::use()  const { return use_m; }
+cDP EnG::props() const { return gpuProps_m; }

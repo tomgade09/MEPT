@@ -10,6 +10,7 @@
 //#include "ErrorHandling/cudaDeviceMacros.h"
 
 using std::cout;
+using std::clog;
 using std::invalid_argument;
 
 namespace utils
@@ -25,8 +26,24 @@ namespace utils
 				array2D[out] = &array1D[out * innerDim];
 		}
 
-		void setup2DArray(float** data1D_d, float*** data2D_d, size_t outerDim, size_t innerDim)
+		void setDev(size_t devNum)  //internal function not exposed to outside (through header)
 		{
+			int numdevs{ 0 };
+			int activedev{ -1 };
+			cudaGetDeviceCount(&numdevs);
+			cudaGetDevice(&activedev);
+			int dnumInt{ static_cast<size_t>(devNum) };
+			
+			if (dnumInt >= numdevs || dnumInt < 0)
+				clog << "Invalid device number " << dnumInt << ".  Number of devices " << numdevs << ".  Using default device.";
+			else if (activedev != dnumInt)
+				cudaSetDevice(dnumInt);
+		}
+		
+		void setup2DArray(float** data1D_d, float*** data2D_d, size_t outerDim, size_t innerDim, size_t devNum)
+		{
+			setDev(devNum);
+			
 			CUDA_API_ERRCHK(cudaMalloc((void**)&(*data1D_d), outerDim * innerDim * sizeof(float*)));
 			CUDA_API_ERRCHK(cudaMalloc((void**)&(*data2D_d), outerDim * sizeof(float*)));
 			
@@ -36,8 +53,10 @@ namespace utils
 			CUDA_KERNEL_ERRCHK_WSYNC();
 		}
 
-		void copy2DArray(vector<vector<float>>& data, float** data1D_d, bool hostToDev)
+		void copy2DArray(vector<vector<float>>& data, float** data1D_d, bool hostToDev, size_t devNum)
 		{
+			setDev(devNum);
+			
 			size_t frontSize{ data.front().size() };
 			for (const auto& elem : data)
 				if (elem.size() != frontSize)
@@ -53,8 +72,10 @@ namespace utils
 			}
 		}
 
-		void free2DArray(float** data1D_d, float*** data2D_d)
+		void free2DArray(float** data1D_d, float*** data2D_d, size_t devNum)
 		{
+			setDev(devNum);
+			
 			CUDA_API_ERRCHK(cudaFree(*data1D_d));
 			CUDA_API_ERRCHK(cudaFree(*data2D_d));
 
@@ -62,16 +83,16 @@ namespace utils
 			*data2D_d = nullptr;
 		}
 
-		void getGPUMemInfo(size_t* free, size_t* total, int GPUidx)
+		void getGPUMemInfo(size_t* free, size_t* total, size_t devNum)
 		{ //use CUDA API to get free and total mem sizes for a specified GPU
 			int currDev{ -1 };
 			CUDA_API_ERRCHK(cudaGetDevice(&currDev));
 
-			if (currDev != GPUidx) CUDA_API_ERRCHK(cudaSetDevice(GPUidx));
+			if (currDev != devNum) CUDA_API_ERRCHK(cudaSetDevice(devNum));
 
 			CUDA_API_ERRCHK(cudaMemGetInfo(free, total));
 
-			if (currDev != GPUidx) CUDA_API_ERRCHK(cudaSetDevice(currDev));
+			if (currDev != devNum) CUDA_API_ERRCHK(cudaSetDevice(currDev));
 		}
 
 		void getCurrGPUMemInfo(size_t* free, size_t* total)
