@@ -185,14 +185,14 @@ const vector<vector<float>>& Satellite::data() const
 	return data_m;
 }
 
-float** Satellite::get2DDataGPUPtr() const
+float** Satellite::get2DDataGPUPtr(int GPUind) const
 {
-	return satCaptrData2D_d;
+	return satCaptrData2D_d;//.at(GPUind);
 }
 
-float* Satellite::get1DDataGPUPtr() const
+float* Satellite::get1DDataGPUPtr(int GPUind) const
 {
-	return satCaptrData1D_d;
+	return satCaptrData1D_d;//.at(GPUind);
 }
 
 size_t Satellite::getNumberOfAttributes() const

@@ -27,8 +27,10 @@ protected:
 	bool   initializedGPU_m{ false };
 
 	size_t numberOfParticles_m{ 0 };
-
-	DBL2DV   data_m; //[attribute][particle]
+	//size_t numGPUs_m;
+	//vector<size_t> particleCountPerGPU_m;
+	
+	DBL2DV  data_m; //[attribute][particle]
 	float*  satCaptrData1D_d{ nullptr }; //flattened satellite capture data on GPU
 	float** satCaptrData2D_d{ nullptr }; //2D satellite capture data on GPU
 	float** particleData2D_d{ nullptr };
@@ -51,13 +53,13 @@ public:
 	bool	      upward() const;
 	DBL2DV&       __data();
 	const DBL2DV& data() const;
-	float**      get2DDataGPUPtr() const;
-	float*       get1DDataGPUPtr() const;
+	float**      get2DDataGPUPtr(int GPUind) const;
+	float*       get1DDataGPUPtr(int GPUind) const;
 	size_t        getNumberOfAttributes() const;
 	size_t        getNumberOfParticles()  const;
 
 	//Other functions
-	void iterateDetector(float simtime, float dt, int blockSize); //increment time, track overall sim time, or take an argument??
+	void iterateDetector(float simtime, float dt, int blockSize, int GPUind); //increment time, track overall sim time, or take an argument??
 	void iterateDetectorCPU(const DBL2DV& particleData, seconds simtime, seconds dt);
 	void copyDataToHost(); //some sort of sim time check to verify I have iterated for the current sim time??
 	void saveDataToDisk(string folder);

@@ -4,12 +4,9 @@
 #include <filesystem>
 
 #include "utils/loopmacros.h"
+#include "utils/arrayUtilsGPU.h"
 #include "utils/serializationHelpers.h"
 #include "ErrorHandling/simExceptionMacros.h"
-
-#ifdef GPU
-#include "cuda.h"
-#endif //GPU
 
 using std::cout;
 using std::cerr;
@@ -74,6 +71,7 @@ Simulation::Simulation(string saveRootDir) : saveRootDir_m{ saveRootDir + "/" },
 {
 	SIM_API_EXCEP_CHECK(loadSimulation(saveRootDir_m));
 	loadDataFromDisk();
+	setupGPU();
 }
 
 Simulation::~Simulation()
@@ -85,10 +83,10 @@ Simulation::~Simulation()
 }
 
 
-void Simulation::printSimAttributes(int numberOfIterations, int itersBtwCouts, string GPUName) //protected
+void Simulation::printSimAttributes(int numberOfIterations, int itersBtwCouts) //protected
 {
 	//Sim Header (folder) printed from Python - move here eventually
-	cout << "GPU Name:       " << GPUName << endl;
+	cout << "GPU(s) In Use:  " << utils::GPU::getDeviceNames() << endl;
 	cout << "Sim between:    " << simMin_m << "m - " << simMax_m << "m" << endl;
 	cout << "dt:             " << dt_m << "s" << endl;
 	cout << "BModel Model:   " << BFieldModel_m.at(0)->name() << endl;
@@ -219,23 +217,13 @@ Satellite* Simulation::satellite(string name) const
 	throw invalid_argument("Simulation::satellite: no satellite of name " + name);
 }
 
-BModel* Simulation::Bmodel() const
+BModel* Simulation::Bmodel(size_t dev) const
 {
-	int dev = 0;
-	#ifdef GPU
-		cudaGetDevice(&dev);
-	#endif // GPU
-
 	return BFieldModel_m.at(dev).get();
 }
 
-EField* Simulation::Efield() const
+EField* Simulation::Efield(size_t dev) const
 {
-	int dev = 0;
-	#ifdef GPU
-		cudaGetDevice(&dev);
-	#endif // GPU
-
 	return EFieldModel_m.at(dev).get();
 }
 
@@ -263,22 +251,12 @@ const vector<vector<float>>& Simulation::getSatelliteData(size_t satInd)
 //Fields data
 float Simulation::getBFieldAtS(float s, float time) const
 {
-	int dev = 0;
-	#ifdef GPU
-	cudaGetDevice(&dev);
-	#endif // GPU
-
-	return BFieldModel_m.at(dev)->getBFieldAtS(s, time);
+	return BFieldModel_m.at(0)->getBFieldAtS(s, time);
 }
 
 float Simulation::getEFieldAtS(float s, float time) const
 {
-	int dev = 0;
-	#ifdef GPU
-	cudaGetDevice(&dev);
-	#endif // GPU
-
-	return EFieldModel_m.at(dev)->getEFieldAtS(s, time);
+	return EFieldModel_m.at(0)->getEFieldAtS(s, time);
 }
 
 
@@ -307,7 +285,9 @@ void Simulation::createParticlesType(string name, float mass, float charge, size
 		namesCopy.push_back(loadFilesDir);
 	}
 
-	shared_ptr<Particles> newPart{ make_unique<Particles>(name, attrNames, mass, charge, numParts) };
+	size_t devcnt{ utils::GPU::getDeviceCount() };
+	vector<size_t> pcntPerGPU{ getSplitSize(numParts) };
+	shared_ptr<Particles> newPart{ make_unique<Particles>(name, attrNames, mass, charge, numParts, devcnt, pcntPerGPU) };
 
 	if (loadFilesDir != "")
 		newPart->loadDataFromDisk(loadFilesDir);
@@ -345,18 +325,16 @@ void Simulation::createSatellite(TempSat* tmpsat, bool save) //protected
 	float altitude{ tmpsat->altitude };
 	bool upwardFacing{ tmpsat->upwardFacing };
 	string name{ tmpsat->name };
-	int dev = 0;
+	size_t dev = 0;
 	// create satelite on all the devices
 	// Satelite array indexed as Sat 1 dev 0-n, Sat 2 dev 0-n, ...
 	do
 	{
-		#ifdef GPU
-			cudaSetDevice(dev);
-		#endif // GPU
+		utils::GPU::setDev(dev);
 
 		if (particles_m.size() <= partInd)
 			throw out_of_range("createSatellite: no particle at the specifed index " + to_string(partInd));
-		if (particles_m.at(partInd)->getCurrDataGPUPtr() == nullptr)
+		if (particles_m.at(partInd)->getCurrDataGPUPtr(dev) == nullptr)
 			throw runtime_error("createSatellite: pointer to GPU data is a nullptr of particle " + particles_m.at(partInd)->name() + " - that's just asking for trouble");
 
 		Log_m->createEntry("Created Satellite: " + name + ", Particles tracked: " + particles_m.at(partInd)->name()
@@ -364,7 +342,7 @@ void Simulation::createSatellite(TempSat* tmpsat, bool save) //protected
 
 		vector<string> attrNames{ "vpara", "vperp", "s", "time", "index" };
 		shared_ptr<Particles> part{ particles_m.at(partInd) };
-		unique_ptr<Satellite> sat{ make_unique<Satellite>(name, attrNames, altitude, upwardFacing, part->getNumberOfParticles(), part->getCurrDataGPUPtr()) };
+		unique_ptr<Satellite> sat{ make_unique<Satellite>(name, attrNames, altitude, upwardFacing, part->getNumberOfParticles(), part->getCurrDataGPUPtr(dev)) };
 		satPartPairs_m.push_back(make_unique<SatandPart>(move(sat), move(part)));
 
 		dev++;
@@ -380,12 +358,10 @@ void Simulation::setBFieldModel(string name, vector<float> args, bool save)
 	vector<string> attrNames;
 	
 	// Multi GPU will run this for each device. If compiled for cpu this will still run a single time.
-	int dev = 0;
+	size_t dev = 0;
 	do /* while (dev < gpuCount_m) */
 	{
-		#ifdef GPU
-		cudaSetDevice(dev);
-		#endif // GPU
+		utils::GPU::setDev(dev);
 
 		if (name == "DipoleB")
 		{
@@ -428,12 +404,10 @@ void Simulation::setBFieldModel(unique_ptr<BModel> BModelptr)
 {
 	//Assume set for all devices
 	BFieldModel_m.clear(); //Empty vector array if already allocated
-	int dev = 0;
+	size_t dev = 0;
 	do
 	{
-		#ifdef GPU
-			cudaSetDevice(dev);
-		#endif // GPU
+		utils::GPU::setDev(dev);
 		BFieldModel_m.push_back(std::move(BModelptr));
 		dev++;
 	} while (dev < gpuCount_m);
@@ -443,12 +417,10 @@ void Simulation::addEFieldModel(string name, vector<float> args, bool save)
 {
 	if (EFieldModel_m.size() == 0)
 	{
-		int dev = 0;
+		size_t dev = 0;
 		do
 		{
-			#ifdef GPU
-			cudaSetDevice(dev);
-			#endif // GPU
+			utils::GPU::setDev(dev);
 
 			EFieldModel_m.push_back( make_unique<EField>() );
 			dev++;
@@ -475,12 +447,10 @@ void Simulation::addEFieldModel(string name, vector<float> args, bool save)
 			attrNames.push_back("magnitude");
 		}
 		cout << "QSPS temporary fix - instantiates with [vector].at(0)\n";
-		int dev = 0;
+		size_t dev = 0;
 		do
 		{
-			#ifdef GPU
-			cudaSetDevice(dev);
-			#endif // GPU
+			utils::GPU::setDev(dev);
 			EFieldModel_m.at(dev)->add(make_unique<QSPS>(altMin.at(0), altMax.at(0), mag.at(0)));
 			dev++;
 		} while (dev < gpuCount_m);
@@ -533,12 +503,10 @@ void Simulation::resetSimulation(bool fields)
 
 	if (fields)
 	{
-		int dev = 0;
+		size_t dev = 0;
 		do
 		{
-		#ifdef GPU
-			cudaSetDevice(dev);
-		#endif // GPU
+			utils::GPU::setDev(dev);
 			BFieldModel_m.at(dev).reset();
 			EFieldModel_m.at(dev).reset();
 			dev++;
@@ -632,12 +600,10 @@ void Simulation::loadSimulation(string saveRootDir)
 		{
 			BModel::Type type{ BModel::Type::Other };
 			in.read(reinterpret_cast<char*>(&type), sizeof(BModel::Type));
-			int dev = 0;
+			size_t dev = 0;
 			do
 			{
-				#ifdef GPU
-					cudaSetDevice(dev);
-				#endif // GPU
+				utils::GPU::setDev(dev);
 
 				if (type == BModel::Type::DipoleB)
 					BFieldModel_m.push_back( make_unique<DipoleB>(in) );
@@ -649,12 +615,10 @@ void Simulation::loadSimulation(string saveRootDir)
 		}
 		else if (comp == Component::EField)
 		{
-			int dev = 0;
+			size_t dev = 0;
 			do
 			{
-			#ifdef GPU
-				cudaSetDevice(dev);
-			#endif // GPU
+				utils::GPU::setDev(dev);
 				dev++;
 				EFieldModel_m.push_back( make_unique<EField>(in));
 			} while (dev < gpuCount_m);

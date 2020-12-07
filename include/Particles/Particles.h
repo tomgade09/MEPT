@@ -4,7 +4,6 @@
 #include <vector>
 #include <string>
 
-#include "Simulation/Environment.h"
 #include "utils/unitsTypedefs.h"
 #include "utils/writeIOclasses.h"
 
@@ -33,8 +32,8 @@ protected:
 	float mass_m;
 	float charge_m;
 	size_t numberOfParticles_m;
-
-	Environment* env;
+	size_t numGPUs_m;
+	vector<size_t> particleCountPerGPU_m;
 	
 	//device pointers
 	vector<float*>  currData1D_d;
@@ -46,7 +45,8 @@ protected:
 	void deserialize(ifstream& in);
 
 public:
-	Particles(string name, vector<string> attributeNames, float mass, float charge, size_t numParts);
+	Particles::Particles(string name, vector<string> attributeNames, float mass, float charge, size_t numParts,
+		size_t numGPUs, vector<size_t> partcntPerGPU);
 	Particles(ifstream& in);
 	~Particles();
 	Particles(const Particles&) = delete;
@@ -57,12 +57,13 @@ public:
 	const STRVEC& attributeNames() const;
 	DBL2DV&       __data(bool orig);
 	const DBL2DV& data(bool orig) const;
-	float        mass()          const;
-	float        charge()        const;
+	float         mass()          const;
+	float         charge()        const;
 	size_t        getNumberOfAttributes() const;
 	size_t        getNumberOfParticles()  const;
+	size_t        getNumParticlesPerGPU(size_t GPUind) const;
 	bool          getInitDataLoaded() const;
-	float**      getCurrDataGPUPtr() const;
+	float**       getCurrDataGPUPtr(size_t GPUind) const;
 
 	size_t        getAttrIndByName(string searchName) const;
 	string        getAttrNameByInd(size_t searchIndx) const;

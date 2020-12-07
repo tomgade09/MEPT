@@ -3,14 +3,13 @@
 #include "cuda_runtime.h"
 #include "device_launch_parameters.h"
 #include "cuda_profiler_api.h"
-#include "curand_kernel.h"
 
 #include "utils/loopmacros.h"
 #include "ErrorHandling/cudaErrorCheck.h"
-//#include "ErrorHandling/cudaDeviceMacros.h"
 
 using std::cout;
-using std::clog;
+using std::cerr;
+using std::string;
 using std::invalid_argument;
 
 namespace utils
@@ -26,7 +25,7 @@ namespace utils
 				array2D[out] = &array1D[out * innerDim];
 		}
 
-		void setDev(size_t devNum)  //internal function not exposed to outside (through header)
+		void setDev(size_t devNum)
 		{
 			int numdevs{ 0 };
 			int activedev{ -1 };
@@ -35,9 +34,31 @@ namespace utils
 			int dnumInt{ static_cast<int>(devNum) };
 			
 			if (dnumInt >= numdevs || dnumInt < 0)
-				clog << "Invalid device number " << dnumInt << ".  Number of devices " << numdevs << ".  Using default device.";
+				cerr << "Invalid device number " << dnumInt << ".  Number of devices " << numdevs << ".  Using default device.";
 			else if (activedev != dnumInt)
 				cudaSetDevice(dnumInt);
+		}
+
+		string getDeviceNames()
+		{
+			cudaDeviceProp prop;
+			size_t devcnt{ getDeviceCount() };
+			string devnames;
+			for (size_t i = 0; i < devcnt; i++)
+			{
+				cudaGetDeviceProperties(&prop, i);
+				devnames += prop.name;
+				if (i != devcnt - 1) devnames += ", ";
+			}
+
+			return devnames;
+		}
+		
+		size_t getDeviceCount()
+		{
+			int numdevs{ 0 };
+			cudaGetDeviceCount(&numdevs);
+			return static_cast<size_t>(numdevs);
 		}
 		
 		void setup2DArray(float** data1D_d, float*** data2D_d, size_t outerDim, size_t innerDim, size_t devNum)

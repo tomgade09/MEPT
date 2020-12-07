@@ -16,8 +16,6 @@ using std::vector;
 using std::unique_ptr;
 using std::shared_ptr;
 
-#define GPU true// For Now this will tell the compiler to compile .cuda in .cpp files
-
 class Simulation
 {
 protected:
@@ -66,7 +64,8 @@ protected:
 
 	//GPU Data
 	int gpuCount_m{ 0 };
-	vector<int>computeSplit_m;
+	vector<float> computeSplit_m;
+	//vector<size_t> grid_m;
 
 	//Simulation-specific classes tracked by Simulation
 	vector<unique_ptr<BModel>>     BFieldModel_m;
@@ -79,11 +78,12 @@ protected:
 	//Protected functions
 	void createSatellite(TempSat* tmpsat, bool save = true);
 	void incTime();
-	void printSimAttributes(int numberOfIterations, int itersBtwCouts, string GPUName);
+	void printSimAttributes(int numberOfIterations, int itersBtwCouts);
 	void loadSimulation(string saveRootDir);
 	void loadDataFromDisk();
 
 	void setupGPU();
+	vector<size_t> getSplitSize(size_t numOfParticles);
 
 public:
 	Simulation(float dt, float simMin, float simMax);
@@ -118,8 +118,8 @@ public:
 	Particles* particles(Satellite* satellite) const;
 	Satellite* satellite(int satInd)  const;
 	Satellite* satellite(string name) const; //search for name, return satellite
-	BModel*    Bmodel()               const;
-	EField*    Efield()               const;
+	BModel*    Bmodel(size_t dev=0)   const;
+	EField*    Efield(size_t dev=0)   const;
 	Log*	   getLog();
 
 	//Simulation data

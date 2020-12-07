@@ -11,7 +11,7 @@
 #include "cuda_profiler_api.h"
 
 //Project specific includes
-#include "physicalconstants.h"
+#include "utils/arrayUtilsGPU.h"
 #include "utils/loopmacros.h"
 #include "Simulation/Simulation.h"
 #include "ErrorHandling/cudaErrorCheck.h"
@@ -26,7 +26,7 @@ using std::make_unique;
 using std::stringstream;
 
 //CUDA Variables
-constexpr int  BLOCKSIZE{ 256 }; //Number of threads per block
+constexpr size_t BLOCKSIZE{ 256 }; //Number of threads per block
 
 //Commonly used values
 extern const int SIMCHARSIZE{ 3 * sizeof(float) };
@@ -118,7 +118,7 @@ namespace physics
 	__global__ void iterateParticle(float** currData_d, BModel** bmodel, EField* efield,
 		const float simtime, const float dt, const float mass, const float charge, const float simmin, const float simmax, int len)
 	{
-		unsigned int thdInd{ blockIdx.x * blockDim.x + threadIdx.x };
+		int thdInd{ blockIdx.x * blockDim.x + threadIdx.x };
 
 		if (thdInd >= len) return;
 		
@@ -198,12 +198,10 @@ void Simulation::initializeSimulation()
 	
 	if (EFieldModel_m.size() == 0) //make sure an EField (even if empty) exists
 	{
-		int dev = 0;
+		size_t dev = 0;
 		do
 		{
-			#ifdef GPU
-			cudaSetDevice(dev);
-			#endif // GPU
+			utils::GPU::setDev(dev);
 
 			EFieldModel_m.push_back( make_unique<EField>() );
 			dev++;
@@ -217,7 +215,7 @@ void Simulation::initializeSimulation()
 	}
 	else
 		cerr << "Simulation::initializeSimulation: warning: no satellites created" << endl;
-
+	
 	initialized_m = true;
 }
 
@@ -227,70 +225,78 @@ void Simulation::iterateSimulation(size_t numberOfIterations, size_t checkDoneEv
 	
 	if (!initialized_m)
 		throw logic_error("Simulation::iterateSimulation: sim not initialized with initializeSimulation()");
-	
-	//
-	// Quick fix to show active GPU name.
-	// This code is not checked for returned CUDA errors.  Eventually replace by reading for devices set to use by Environment. 
-	// Maybe build this into printSimAttributes.
-	//
-	cudaDeviceProp gpuprop;
-	int dev{ -1 };
-	CUDA_API_ERRCHK(cudaGetDevice(&dev));
-	CUDA_API_ERRCHK(cudaGetDeviceProperties(&gpuprop, dev));
-	//
-	//
-	//
-	//
-	//
-	int devNumb = 0; //Eventually loopover device count
-	printSimAttributes(numberOfIterations, checkDoneEvery, gpuprop.name);
+
+	printSimAttributes(numberOfIterations, checkDoneEvery);
 	
 	Log_m->createEntry("Start Iteration of Sim:  " + to_string(numberOfIterations));
+
+	vector<vector<size_t>> grid(gpuCount_m);
 	
 	//convert particle vperp data to mu
-	for (auto& part : particles_m)
-		vperpMuConvert_d <<< part->getNumberOfParticles() / BLOCKSIZE, BLOCKSIZE >>> (part->getCurrDataGPUPtr(), BFieldModel_m.at(devNumb)->this_dev(), part->mass(), true);
-	CUDA_KERNEL_ERRCHK_WSYNC();
+	for (int dev = 0; dev < gpuCount_m; dev++)
+	{
+		for (auto& part : particles_m)
+		{
+			grid.at(dev).push_back(part->getNumParticlesPerGPU(dev) / BLOCKSIZE);
+			vperpMuConvert_d <<< grid.at(dev).back(), BLOCKSIZE >>> (part->getCurrDataGPUPtr(dev), BFieldModel_m.at(dev)->this_dev(), part->mass(), true);
+		}
+		CUDA_KERNEL_ERRCHK_WSYNC();
+	}
 
 	//Setup on GPU variable that checks to see if any threads still have a particle in sim and if not, end iterations early
-	bool* simDone_d{ nullptr };
-	CUDA_API_ERRCHK(cudaMalloc((void**)&simDone_d, sizeof(bool)));
+	vector<bool*> simDone_d;  //setup is done in loop below
 
+	//Create streams for each available GPU
+	//vector<cudaStream_t> streams;
+	for (int i = 0; i < gpuCount_m; i++)
+	{
+		CUDA_API_ERRCHK(cudaSetDevice(i));
+		//streams.push_back(cudaStream_t());
+		//CUDA_API_ERRCHK(cudaStreamCreate(&streams.at(i)));
+
+		simDone_d.push_back(nullptr);
+		CUDA_API_ERRCHK(cudaMalloc((void**)&(simDone_d.at(i)), sizeof(bool)));
+	}
+	
 	//Loop code
 	size_t initEntry{ Log_m->createEntry("Iteration 1", false) };
 	for (size_t cudaloopind = 0; cudaloopind < numberOfIterations; cudaloopind++)
-	{	
-		if (cudaloopind % checkDoneEvery == 0) { CUDA_API_ERRCHK(cudaMemset(simDone_d, true, sizeof(bool))); } //if it's going to be checked in this iter (every checkDoneEvery iterations), set to true
-		
-		for (auto part = particles_m.begin(); part < particles_m.end(); part++)
+	{
+		for (int dev = 0; dev < gpuCount_m; dev++) //iterate over devices - everything is non-blocking / async in loop
 		{
-			iterateParticle <<< (*part)->getNumberOfParticles() / BLOCKSIZE, BLOCKSIZE >>> ((*part)->getCurrDataGPUPtr(), BFieldModel_m.at(devNumb)->this_dev(), EFieldModel_m.at(devNumb)->this_dev(),
-				simTime_m, dt_m, (*part)->mass(), (*part)->charge(), simMin_m, simMax_m, (*part)->getNumberOfParticles());
-			
-			//kernel will set boolean to false if at least one particle is still in sim
-			if (cudaloopind % checkDoneEvery == 0)
-				simActiveCheck <<< (*part)->getNumberOfParticles() / BLOCKSIZE, BLOCKSIZE >>> ((*part)->getCurrDataGPUPtr(), simDone_d);
+			CUDA_API_ERRCHK(cudaSetDevice((int)dev));
+			if (cudaloopind % checkDoneEvery == 0) { CUDA_API_ERRCHK(cudaMemset(simDone_d.at(dev), true, sizeof(bool))); } //if it's going to be checked in this iter (every checkDoneEvery iterations), set to true
+
+			for (size_t part = 0; part < particles_m.size(); part++)
+			{
+				Particles* p{ particles_m.at(part).get() };
+				iterateParticle <<< grid.at(dev).at(part), BLOCKSIZE >>> (p->getCurrDataGPUPtr(dev), BFieldModel_m.at(dev)->this_dev(), EFieldModel_m.at(dev)->this_dev(),
+					simTime_m, dt_m, p->mass(), p->charge(), simMin_m, simMax_m, p->getNumberOfParticles());
+
+				//kernel will set boolean to false if at least one particle is still in sim
+				if (cudaloopind % checkDoneEvery == 0)
+					simActiveCheck <<< grid.at(dev).at(part), BLOCKSIZE >>> (p->getCurrDataGPUPtr(dev), simDone_d.at(dev));
+			}
 		}
 
-		CUDA_KERNEL_ERRCHK_WSYNC_WABORT(); //side effect: cudaDeviceSynchronize() needed for computeKernel to function properly, which this macro provides
+		for (int dev = 0; dev < gpuCount_m; dev++)
+		{   //synchronize all devices
+			CUDA_API_ERRCHK(cudaSetDevice((int)dev));
+			CUDA_KERNEL_ERRCHK_WSYNC_WABORT();   //side effect: cudaDeviceSynchronize() needed for computeKernel to function properly, which this macro provides
+		}
 
-		for (auto sat = satPartPairs_m.begin(); sat < satPartPairs_m.end(); sat += gpuCount_m)
+		for (int dev; dev < gpuCount_m; dev++)
 		{
-			cudaSetDevice(devNumb);
-
-			(*(sat + devNumb))->satellite->iterateDetector(simTime_m, dt_m, BLOCKSIZE);
+			for (auto sat = satPartPairs_m.begin(); sat < satPartPairs_m.end(); sat += gpuCount_m)
+			{
+				//(*sat)->satellite->iterateDetector(simTime_m, dt_m, BLOCKSIZE, dev);
+				//CUDA_KERNEL_ERRCHK_WSYNC_WABORT();
+			}
 		}
 		
 		if (cudaloopind % checkDoneEvery == 0)
-		{
+		{       //only executes once
 			{
-				//if (cudaloopind == 0)
-				//{
-					//size_t free, total;
-					//cudaMemGetInfo(&free, &total);
-					//cout << "cuda mem: free: " << static_cast<float>(free)/1024.0f/1024.0f/1024.0f << "GB, total: " << static_cast<float>(total)/1024.0/1024.0/1024.0 << "GB\n";
-				//}
-
 				string loopStatus;
 				stringstream out;
 
@@ -304,12 +310,15 @@ void Simulation::iterateSimulation(size_t numberOfIterations, size_t checkDoneEv
 
 				Log_m->createEntry(loopStatus);
 				cout << loopStatus << "\n";
-
-				
 			}
 
-			bool done{ false };
-			CUDA_API_ERRCHK(cudaMemcpy(&done, simDone_d, sizeof(bool), cudaMemcpyDeviceToHost));
+			bool done{ true };
+			for (int dev = 0; dev < gpuCount_m; dev++)
+			{
+				bool tmp{ false };
+				CUDA_API_ERRCHK(cudaMemcpy(&done, simDone_d.at(dev), sizeof(bool), cudaMemcpyDeviceToHost));
+				if (!tmp) done = false;
+			}
 			if (done)
 			{
 				cout << "All particles finished early.  Breaking loop.\n";
@@ -320,16 +329,28 @@ void Simulation::iterateSimulation(size_t numberOfIterations, size_t checkDoneEv
 		incTime();
 	}
 
-	CUDA_API_ERRCHK(cudaFree(simDone_d));
+	for (int dev = 0; dev < gpuCount_m; dev++)
+		CUDA_API_ERRCHK(cudaFree(simDone_d.at(dev)));
 
 	//Convert particle, satellite mu data to vperp
-	for (auto part = particles_m.begin(); part < particles_m.end(); part++)
-		vperpMuConvert_d <<< (*part)->getNumberOfParticles() / BLOCKSIZE, BLOCKSIZE >>> ((*part)->getCurrDataGPUPtr(), BFieldModel_m.at(devNumb)->this_dev(), (*part)->mass(), false); //nullptr will need to be changed if B ever becomes time dependent, would require loop to record when it stops tracking the particle
-
-	for (auto sat = satPartPairs_m.begin(); sat < satPartPairs_m.end(); sat += gpuCount_m)
+	for (int dev = 0; dev < gpuCount_m; dev++)
 	{
-		cudaSetDevice(devNumb);
-		vperpMuConvert_d <<< (*(sat + devNumb))->particle->getNumberOfParticles() / BLOCKSIZE, BLOCKSIZE >>>  ((*sat)->satellite->get2DDataGPUPtr(), BFieldModel_m.at(devNumb)->this_dev(), (*sat)->particle->mass(), false, 3);
+		for (int p = 0; p < particles_m.size(); p++)
+		{
+			CUDA_API_ERRCHK(cudaSetDevice(dev));
+			Particles* part{ particles_m.at(p).get() };
+			vperpMuConvert_d <<< grid.at(dev).at(p), BLOCKSIZE >>> (part->getCurrDataGPUPtr(dev), BFieldModel_m.at(dev)->this_dev(), part->mass(), false);
+		}
+	}
+
+	for (int dev = 0; dev < gpuCount_m; dev++)
+	{
+		for (int s = 0; s < satPartPairs_m.size(); s++)
+		{
+			SatandPart* sat{ satPartPairs_m.at(s).get() };
+			CUDA_API_ERRCHK(cudaSetDevice(dev));
+			vperpMuConvert_d <<< grid.at(dev).at(s), BLOCKSIZE >>> (sat->satellite->get2DDataGPUPtr(dev), BFieldModel_m.at(dev)->this_dev(), sat->particle->mass(), false, 3);
+		}
 	}
 
 	//Copy data back to host
@@ -361,12 +382,12 @@ void Simulation::setupGPU()
 {
 	cudaDeviceProp devProp;
 	int gpuCount	 = 0;
-	int computeTotal = 0;
+	float computeTotal = 0;
 
 	// Get total number of NVIDIA GPUs
 	if (CUDA_API_ERRCHK(cudaGetDeviceCount(&gpuCount)))
 	{
-		cout << "Error: cannot get GPU count.  Only default GPU used.  Assuming at least one CUDA capable device.\n";
+		cerr << "Cannot get GPU count.  Only default GPU used.  Assuming at least one CUDA capable device.\n";
 		computeSplit_m.push_back(1);
 		gpuCount_m = 1;
 		return;
@@ -381,15 +402,82 @@ void Simulation::setupGPU()
 		// Get the GPU Speed
 		CUDA_API_ERRCHK(cudaGetDeviceProperties(&devProp, gpu));
 
-		// For now speed number of multiprocessors * clock speed
+		// For now speed = number of multiprocessors * clock speed (MHz)
 		// In future: either optimize for specific hardware create a more precise equation
-		int compute = devProp.clockRate * devProp.multiProcessorCount;
+		float compute = static_cast<float>(devProp.clockRate/1024 * devProp.multiProcessorCount);
 		computeTotal += compute;
-		computeSplit_m.push_back(compute);
+		computeSplit_m.push_back(compute);  //need to use floats to get decimal numbers
 	}
+	
 	// Iterate through computeSplit and get percent ratio work each device will get
-	for (int i = 0; i < computeSplit_m.size(); ++i)
+	for (size_t i = 0; i < computeSplit_m.size(); ++i)
 	{
 		computeSplit_m.at(i) /= computeTotal;
 	}
+}
+
+
+vector<size_t> Simulation::getSplitSize(size_t numOfParticles)
+{   //returns the number of particles a device will receive based on the pct in computeSplit_m
+	//returns block aligned numbers - all particles are accounted for, which may mean that the
+	//the block aligned number returned for the last GPU doesn't entirely execute (excess threads off the end)
+
+	vector<size_t> particleSplit;
+
+	auto getBlockAlignedCount = [](size_t count)
+	{
+		size_t ret{ 0 };
+		float bs{ static_cast<float>(BLOCKSIZE) };
+		
+		if (count % BLOCKSIZE)
+		{
+			float pct(static_cast<float>(count % BLOCKSIZE) / bs);  //find percent of blocksize of the remainder
+			if (pct >= 0.5)      //if remainder is over 50% of block size, add an extra block
+				ret = static_cast<size_t>((count / BLOCKSIZE + 1) * BLOCKSIZE);
+			else                 //else just return the block aligned size
+				ret = static_cast<size_t>((count / BLOCKSIZE) * BLOCKSIZE);
+		}
+
+		return ret;
+	};
+
+	size_t total{ 0 };
+	for (const auto& comp : computeSplit_m)
+	{
+		size_t bsaln{ getBlockAlignedCount(static_cast<size_t>(comp * static_cast<float>(numOfParticles))) };
+		total += bsaln;
+		particleSplit.push_back(bsaln);
+	}
+
+	//above code creates particle count in multiples of blocksize
+	
+	size_t diff{ 0 };
+	if (total < numOfParticles)  //check that we aren't missing particles or have extra blocks
+	{
+		diff = numOfParticles - total;
+
+		while (diff / BLOCKSIZE)  //does not execute when diff < BLOCKSIZE
+		{   //if more than one block not accounted for... (shouldn't happen)
+			cout << "Need " << (diff / BLOCKSIZE) << " more full blocks\n";
+			particleSplit.at((diff / BLOCKSIZE) % gpuCount_m) += BLOCKSIZE;  //add one full block to GPU
+			diff -= BLOCKSIZE;
+			//overflows are prevented by the fact that when the int div product is 0, this doesn't execute
+		}
+		
+		//less than one full block of unaccounted for particles remains.  Add one block
+		particleSplit.at(0) += gpuCount_m;
+	}
+	else if (total > numOfParticles)
+	{
+		diff = total - numOfParticles;
+
+		while (diff / BLOCKSIZE)
+		{   //if one or more whole extra blocks created... (shouldn't happen)
+			cout << (diff / BLOCKSIZE) << " extra blocks created\n";
+			particleSplit.at((diff / BLOCKSIZE) % gpuCount_m) -= BLOCKSIZE;  //remove one full block from GPU
+			diff -= BLOCKSIZE;
+		}
+	}
+
+	return particleSplit;
 }
