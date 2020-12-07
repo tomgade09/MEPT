@@ -2,6 +2,7 @@
 #define ENVIRONMENT_H
 
 #include <vector>
+#include "cuda_runtime.h"
 
 using std::vector;
 
@@ -19,12 +20,20 @@ private:
 	vector<CPU> cpus_m;
 	vector<GPU> gpus_m;
 
+<<<<<<< HEAD
 	size_t numParticles_m;
 	
 	void taskSplit();
 
 public:
 	Environment(size_t numParticles);
+=======
+	int numOfElements_m;
+
+public:
+	Environment();
+	Environment( int numOfElements );
+>>>>>>> 512f72eff49d953770a6f7b65cbde4ede7b041b2
 
 	void useCPU(bool use, GPURealID cpunum = 0);
 	void useGPU(bool use, GPURealID gpunum = 0);
@@ -39,6 +48,8 @@ public:
 
 	CPU getCPU(int cpuind) const;
 	GPU getGPU(int gpuind) const;
+	int getPaddedSize(int dev, int partCount);
+
 };
 
 class Environment::CPU
@@ -87,7 +98,5 @@ public:
 	bool use()  const;
 	cudaDeviceProp props() const;
 };
-
-#undef cDP
 
 #endif //end ENVIRONMENT_SIMULATION_H

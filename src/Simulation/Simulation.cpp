@@ -7,6 +7,10 @@
 #include "utils/serializationHelpers.h"
 #include "ErrorHandling/simExceptionMacros.h"
 
+#ifdef GPU
+#include "cuda.h"
+#endif //GPU
+
 using std::cout;
 using std::cerr;
 using std::endl;
@@ -60,6 +64,9 @@ Simulation::Simulation(float dt, float simMin, float simMax) :
 
 	saveRootDir_m = dataout.str();
 	Log_m = make_unique<Log>(saveRootDir_m + "simulation.log");
+
+	// Setup GPU Information ( number of devices and compute capability of each device )
+	setupGPU();
 }
 
 Simulation::Simulation(string saveRootDir) : saveRootDir_m{ saveRootDir + "/" },
@@ -84,7 +91,7 @@ void Simulation::printSimAttributes(int numberOfIterations, int itersBtwCouts, s
 	cout << "GPU Name:       " << GPUName << endl;
 	cout << "Sim between:    " << simMin_m << "m - " << simMax_m << "m" << endl;
 	cout << "dt:             " << dt_m << "s" << endl;
-	cout << "BModel Model:   " << BFieldModel_m->name() << endl;
+	cout << "BModel Model:   " << BFieldModel_m.at(0)->name() << endl;
 	cout << "EField Elems:   " << ((Efield()->qspsCount() > 0) ? "QSPS: " + to_string(Efield()->qspsCount()) : "") << endl;
 	cout << "Particles:      ";
 	for (size_t iii = 0; iii < particles_m.size(); iii++)
@@ -140,7 +147,15 @@ int Simulation::getNumberOfParticleTypes() const
 
 int Simulation::getNumberOfSatellites() const
 {
-	return (int)satPartPairs_m.size();
+	if (gpuCount_m > 0)
+	{
+		// Size should be a perfect multiple so don't need to worry about rounding
+		return (int)satPartPairs_m.size() / gpuCount_m;
+	}
+	else
+	{
+		return (int)satPartPairs_m.size();
+	}
 }
 
 int Simulation::getNumberOfParticles(int partInd) const
@@ -206,12 +221,22 @@ Satellite* Simulation::satellite(string name) const
 
 BModel* Simulation::Bmodel() const
 {
-	return BFieldModel_m.get();
+	int dev = 0;
+	#ifdef GPU
+		cudaGetDevice(&dev);
+	#endif // GPU
+
+	return BFieldModel_m.at(dev).get();
 }
 
 EField* Simulation::Efield() const
 {
-	return EFieldModel_m.get();
+	int dev = 0;
+	#ifdef GPU
+		cudaGetDevice(&dev);
+	#endif // GPU
+
+	return EFieldModel_m.at(dev).get();
 }
 
 Log* Simulation::getLog()
@@ -238,12 +263,22 @@ const vector<vector<float>>& Simulation::getSatelliteData(size_t satInd)
 //Fields data
 float Simulation::getBFieldAtS(float s, float time) const
 {
-	return BFieldModel_m->getBFieldAtS(s, time);
+	int dev = 0;
+	#ifdef GPU
+	cudaGetDevice(&dev);
+	#endif // GPU
+
+	return BFieldModel_m.at(dev)->getBFieldAtS(s, time);
 }
 
 float Simulation::getEFieldAtS(float s, float time) const
 {
-	return EFieldModel_m->getEFieldAtS(s, time);
+	int dev = 0;
+	#ifdef GPU
+	cudaGetDevice(&dev);
+	#endif // GPU
+
+	return EFieldModel_m.at(dev)->getEFieldAtS(s, time);
 }
 
 
@@ -310,74 +345,115 @@ void Simulation::createSatellite(TempSat* tmpsat, bool save) //protected
 	float altitude{ tmpsat->altitude };
 	bool upwardFacing{ tmpsat->upwardFacing };
 	string name{ tmpsat->name };
+	int dev = 0;
+	// create satelite on all the devices
+	// Satelite array indexed as Sat 1 dev 0-n, Sat 2 dev 0-n, ...
+	do
+	{
+		#ifdef GPU
+			cudaSetDevice(dev);
+		#endif // GPU
 
-	if (particles_m.size() <= partInd)
-		throw out_of_range("createSatellite: no particle at the specifed index " + to_string(partInd));
-	if (particles_m.at(partInd)->getCurrDataGPUPtr() == nullptr)
-		throw runtime_error("createSatellite: pointer to GPU data is a nullptr of particle " + particles_m.at(partInd)->name() + " - that's just asking for trouble");
+		if (particles_m.size() <= partInd)
+			throw out_of_range("createSatellite: no particle at the specifed index " + to_string(partInd));
+		if (particles_m.at(partInd)->getCurrDataGPUPtr() == nullptr)
+			throw runtime_error("createSatellite: pointer to GPU data is a nullptr of particle " + particles_m.at(partInd)->name() + " - that's just asking for trouble");
 
-	Log_m->createEntry("Created Satellite: " + name + ", Particles tracked: " + particles_m.at(partInd)->name()
-		+ ", Altitude: " + to_string(altitude) + ", " + ((upwardFacing) ? "Upward" : "Downward") + " Facing Detector");
+		Log_m->createEntry("Created Satellite: " + name + ", Particles tracked: " + particles_m.at(partInd)->name()
+			+ ", Altitude: " + to_string(altitude) + ", " + ((upwardFacing) ? "Upward" : "Downward") + " Facing Detector");
 
-	vector<string> attrNames{ "vpara", "vperp", "s", "time", "index" };
-	shared_ptr<Particles> part{ particles_m.at(partInd) };
-	unique_ptr<Satellite> sat{ make_unique<Satellite>(name, attrNames, altitude, upwardFacing, part->getNumberOfParticles(), part->getCurrDataGPUPtr()) };
-	satPartPairs_m.push_back(make_unique<SatandPart>(move(sat), move(part)));
+		vector<string> attrNames{ "vpara", "vperp", "s", "time", "index" };
+		shared_ptr<Particles> part{ particles_m.at(partInd) };
+		unique_ptr<Satellite> sat{ make_unique<Satellite>(name, attrNames, altitude, upwardFacing, part->getNumberOfParticles(), part->getCurrDataGPUPtr()) };
+		satPartPairs_m.push_back(make_unique<SatandPart>(move(sat), move(part)));
+
+		dev++;
+	} while (dev < gpuCount_m);
 }
 
 void Simulation::setBFieldModel(string name, vector<float> args, bool save)
 {//add log file messages
-	if (BFieldModel_m)
-		throw invalid_argument("Simulation::setBFieldModel: trying to assign B Field Model when one is already assigned - existing: " + BFieldModel_m->name() + ", attempted: " + name);
+	if (BFieldModel_m.size() != 0)
+		throw invalid_argument("Simulation::setBFieldModel: trying to assign B Field Model when one is already assigned - existing: " + BFieldModel_m.at(0)->name() + ", attempted: " + name);
 	if (args.empty())
 		throw invalid_argument("Simulation::setBFieldModel: no arguments passed in");
-	
 	vector<string> attrNames;
-
-	if (name == "DipoleB")
+	
+	// Multi GPU will run this for each device. If compiled for cpu this will still run a single time.
+	int dev = 0;
+	do /* while (dev < gpuCount_m) */
 	{
-		if (args.size() == 1)
-		{ //for defaults in constructor of DipoleB
-			BFieldModel_m = make_unique<DipoleB>(args.at(0));
-			args.push_back(((DipoleB*)BFieldModel_m.get())->getErrTol());
-			args.push_back(((DipoleB*)BFieldModel_m.get())->getds());
+		#ifdef GPU
+		cudaSetDevice(dev);
+		#endif // GPU
+
+		if (name == "DipoleB")
+		{
+			if (args.size() == 1)
+			{ //for defaults in constructor of DipoleB
+				BFieldModel_m.push_back( make_unique<DipoleB>(args.at(0)) );
+				args.push_back(((DipoleB*)BFieldModel_m.at(dev).get())->getErrTol());
+				args.push_back(((DipoleB*)BFieldModel_m.at(dev).get())->getds());
+			}
+			else if (args.size() == 3)
+				BFieldModel_m.push_back( make_unique<DipoleB>(args.at(0), args.at(1), args.at(2)) );
+			else
+				throw invalid_argument("setBFieldModel: wrong number of arguments specified for DipoleB: " + to_string(args.size()));
+
+			attrNames = { "ILAT", "ds", "errTol" };
 		}
-		else if (args.size() == 3)
-			BFieldModel_m = make_unique<DipoleB>(args.at(0), args.at(1), args.at(2));
-		else
-			throw invalid_argument("setBFieldModel: wrong number of arguments specified for DipoleB: " + to_string(args.size()));
+		else if (name == "DipoleBLUT")
+		{
+			if (args.size() == 3)
+				BFieldModel_m.push_back( make_unique<DipoleBLUT>(args.at(0), simMin_m, simMax_m, args.at(1), (int)args.at(2)) );
+			else
+				throw invalid_argument("setBFieldModel: wrong number of arguments specified for DipoleBLUT: " + to_string(args.size()));
 
-		attrNames = { "ILAT", "ds", "errTol" };
-	}
-	else if (name == "DipoleBLUT")
-	{
-		if (args.size() == 3)
-			BFieldModel_m = make_unique<DipoleBLUT>(args.at(0), simMin_m, simMax_m, args.at(1), (int)args.at(2));
+			attrNames = { "ILAT", "ds", "numMsmts" };
+		}
 		else
-			throw invalid_argument("setBFieldModel: wrong number of arguments specified for DipoleBLUT: " + to_string(args.size()));
-
-		attrNames = { "ILAT", "ds", "numMsmts" };
-	}
-	else
-	{
-		cout << "Not sure what model is being referenced.  Using DipoleB instead of " << name << endl;
-		BFieldModel_m = make_unique<DipoleB>(args.at(0));
-		args.resize(3);
-		args.at(1) = ((DipoleB*)BFieldModel_m.get())->getErrTol();
-		args.at(1) = ((DipoleB*)BFieldModel_m.get())->getds();
-		attrNames = { "ILAT", "ds", "errTol" };
-	}
+		{
+			cout << "Not sure what model is being referenced.  Using DipoleB instead of " << name << endl;
+			BFieldModel_m.push_back( make_unique<DipoleB>(args.at(0)) );
+			args.resize(3);
+			args.at(1) = ((DipoleB*)BFieldModel_m.at(dev).get())->getErrTol();
+			args.at(1) = ((DipoleB*)BFieldModel_m.at(dev).get())->getds();
+			attrNames = { "ILAT", "ds", "errTol" };
+		}
+		dev++;
+	} while (dev < gpuCount_m);
 }
 
 void Simulation::setBFieldModel(unique_ptr<BModel> BModelptr)
 {
-	BFieldModel_m = std::move(BModelptr);
+	//Assume set for all devices
+	BFieldModel_m.clear(); //Empty vector array if already allocated
+	int dev = 0;
+	do
+	{
+		#ifdef GPU
+			cudaSetDevice(dev);
+		#endif // GPU
+		BFieldModel_m.push_back(std::move(BModelptr));
+		dev++;
+	} while (dev < gpuCount_m);
 }
 
 void Simulation::addEFieldModel(string name, vector<float> args, bool save)
 {
-	if (EFieldModel_m == nullptr)
-		EFieldModel_m = make_unique<EField>();
+	if (EFieldModel_m.size() == 0)
+	{
+		int dev = 0;
+		do
+		{
+			#ifdef GPU
+			cudaSetDevice(dev);
+			#endif // GPU
+
+			EFieldModel_m.push_back( make_unique<EField>() );
+			dev++;
+		} while (dev < gpuCount_m);
+	}
 	
 	vector<string> attrNames;
 
@@ -399,7 +475,15 @@ void Simulation::addEFieldModel(string name, vector<float> args, bool save)
 			attrNames.push_back("magnitude");
 		}
 		cout << "QSPS temporary fix - instantiates with [vector].at(0)\n";
-		EFieldModel_m->add(make_unique<QSPS>(altMin.at(0), altMax.at(0), mag.at(0)));
+		int dev = 0;
+		do
+		{
+			#ifdef GPU
+			cudaSetDevice(dev);
+			#endif // GPU
+			EFieldModel_m.at(dev)->add(make_unique<QSPS>(altMin.at(0), altMax.at(0), mag.at(0)));
+			dev++;
+		} while (dev < gpuCount_m);
 		Log_m->createEntry("Added QSPS");
 	}
 	else if (name == "AlfvenLUT")
@@ -449,8 +533,16 @@ void Simulation::resetSimulation(bool fields)
 
 	if (fields)
 	{
-		BFieldModel_m.reset();
-		EFieldModel_m.reset();
+		int dev = 0;
+		do
+		{
+		#ifdef GPU
+			cudaSetDevice(dev);
+		#endif // GPU
+			BFieldModel_m.at(dev).reset();
+			EFieldModel_m.at(dev).reset();
+			dev++;
+		} while (dev < gpuCount_m);
 	}
 }
 
@@ -481,14 +573,14 @@ void Simulation::saveSimulation() const
 	//Write BField
 	Component comp{ Component::BField };
 	out.write(reinterpret_cast<const char*>(&comp), sizeof(Component));
-	BModel::Type type{ BFieldModel_m->type() };
+	BModel::Type type{ BFieldModel_m.at(0)->type() };
 	out.write(reinterpret_cast<const char*>(&type), sizeof(BModel::Type));
-	BFieldModel_m->serialize(out);
+	BFieldModel_m.at(0)->serialize(out);
 
 	//Write EField
 	comp = Component::EField;
 	out.write(reinterpret_cast<const char*>(&comp), sizeof(Component));
-	EFieldModel_m->serialize(out);
+	EFieldModel_m.at(0)->serialize(out);
 
 	//Write Log
 	//comp = Component::Log;
@@ -540,16 +632,32 @@ void Simulation::loadSimulation(string saveRootDir)
 		{
 			BModel::Type type{ BModel::Type::Other };
 			in.read(reinterpret_cast<char*>(&type), sizeof(BModel::Type));
-			
-			if (type == BModel::Type::DipoleB)
-				BFieldModel_m = make_unique<DipoleB>(in);
-			else if (type == BModel::Type::DipoleBLUT)
-				BFieldModel_m = make_unique<DipoleBLUT>(in);
-			else throw std::runtime_error("Simulation::load: BModel type not recognized");
+			int dev = 0;
+			do
+			{
+				#ifdef GPU
+					cudaSetDevice(dev);
+				#endif // GPU
+
+				if (type == BModel::Type::DipoleB)
+					BFieldModel_m.push_back( make_unique<DipoleB>(in) );
+				else if (type == BModel::Type::DipoleBLUT)
+					BFieldModel_m.push_back(make_unique<DipoleBLUT>(in));
+				else throw std::runtime_error("Simulation::load: BModel type not recognized");
+				dev++;
+			} while (dev < gpuCount_m);
 		}
 		else if (comp == Component::EField)
 		{
-			EFieldModel_m = make_unique<EField>(in);
+			int dev = 0;
+			do
+			{
+			#ifdef GPU
+				cudaSetDevice(dev);
+			#endif // GPU
+				dev++;
+				EFieldModel_m.push_back( make_unique<EField>(in));
+			} while (dev < gpuCount_m);
 		}
 		//else if (comp == Component::Log)
 		//{

@@ -51,6 +51,8 @@
 *.snip
 *.bin
 *.log
+*.iobj
+*.ipdb
 addrules
 
 # Project-specific folders

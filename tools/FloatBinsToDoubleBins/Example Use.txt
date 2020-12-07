@@ -1,0 +1,4 @@
+Use the command below to convert floats to doubles.  The first argument is the data directory,
+the second is the name of the particle ("elec") and the others are satellite names
+
+./ftd ../../_dataout/[YOUR RUN HERE]/ elec 4e6ElecDng 4e6ElecUpg topElec btmElec

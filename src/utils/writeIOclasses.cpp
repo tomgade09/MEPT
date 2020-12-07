@@ -303,9 +303,9 @@ namespace utils
 					throw invalid_argument("ParticleDistribution::generate(vector<meters>): \
 						At least one of { energy, pitch } range is not specified. Cannot generate distribution.");
 
-				for (const auto& pitch : tmp.pitches) //iterate energies over pitches, store in epa
+				for (const auto& energy : tmp.energies) //iterate pitches over energies, store in epa
 				{
-					for (const auto& energy : tmp.energies)
+					for (const auto& pitch : tmp.pitches)
 					{
 						epa.energies.push_back(energy);
 						epa.pitches.push_back(pitch);

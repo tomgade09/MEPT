@@ -3,7 +3,6 @@
 #include "Simulation/Environment.h"
 #include "ErrorHandling/cudaErrorCheck.h"
 
-#define cDP cudaDeviceProp
 #define Env Environment
 #define EnC Environment::CPU
 #define EnG Environment::GPU
@@ -39,7 +38,20 @@ Environment::Environment(size_t numParticles) : numParticles_m{ numParticles }
 	cudaSetDevice(0);
 	
 
+<<<<<<< HEAD
 	taskSplit();
+=======
+	//taskSplit(); //not as efficient as I would like...
+				 //splits tasks evenly between all devices (which default to use_m = true)
+				 //later if/when the user decides to manually add speeds calculated themselves
+				 //(which should be done for now), this leads to taskSplit() being called twice
+				 //This is basically useless because it's recommended to change speeds
+				 //but it's the only way to ensure that speeds / indicies are assigned out to each device
+				 //- that is - if I remove this and a user doesn't set speeds (invoking taskSplit())
+				 //indicies will remain default of -1 - which will throw an exception when used in code
+				 //Later, a more robust speed testing needs to be developed, or the user needs to be forced
+				 //to supply their own speeds on instantiation of an Environment instance
+>>>>>>> 512f72eff49d953770a6f7b65cbde4ede7b041b2
 }
 
 // ---------------- Environment::Private ---------------- //
@@ -106,7 +118,7 @@ void Env::useCPU(bool use, size_t cpunum) //cpunum default = 0
 	cpus_m.at(cpunum).use_m = false;  return;
 	
 	cpus_m.at(cpunum).use_m = use;
-	taskSplit();
+	//taskSplit();
 }
 
 void Env::useGPU(bool use, size_t gpunum) //gpunum default = 0
@@ -118,7 +130,7 @@ void Env::useGPU(bool use, size_t gpunum) //gpunum default = 0
 	}
 	
 	gpus_m.at(gpunum).use_m = use;
-	taskSplit();
+	//taskSplit();
 }
 
 void Env::setSpeed(const vector<int>& cpuspd, const vector<int>& gpuspd)
@@ -139,7 +151,7 @@ void Env::setSpeed(const vector<int>& cpuspd, const vector<int>& gpuspd)
 	for (int i = 0; i < cpus_m.size(); i++)
 		cpus_m.at(i).speed_m = cpuspd.at(i);
 
-	taskSplit();
+	//taskSplit();
 }
 
 void Env::setBlockSize(size_t blocksize, size_t gpu)
@@ -320,4 +332,16 @@ void EnG::setBlockSize(int blocksize)
 // ---------------- Environment::GPU::Public ---------------- //
 int EnG::speed() const { return speed_m; }
 bool EnG::use()  const { return use_m; }
+<<<<<<< HEAD
 cudaDeviceProp EnG::props() const { return gpuProps_m; }
+=======
+cDP EnG::props() const { return gpuProps_m; }
+
+//int EnG::getPaddedSize(int dev, int partCount)
+int Environment::getPaddedSize(int dev, int partCount)
+{
+	int computeCapability = 1;// stored in vect normally at dev
+	int paddedSize = ceil( ( ceil( (float)partCount * computeCapability ) ) / 256 );
+	return paddedSize;
+}
+>>>>>>> 512f72eff49d953770a6f7b65cbde4ede7b041b2

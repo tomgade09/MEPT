@@ -191,13 +191,25 @@ namespace physics
 //Simulation member functions
 void Simulation::initializeSimulation()
 {
-	if (BFieldModel_m == nullptr)
+	if (BFieldModel_m.size() == 0)
 		throw logic_error("Simulation::initializeSimulation: no Earth Magnetic Field model specified");
 	if (particles_m.size() == 0)
 		throw logic_error("Simulation::initializeSimulation: no particles in simulation, sim cannot be initialized without particles");
 	
-	if (EFieldModel_m == nullptr) //make sure an EField (even if empty) exists
-		EFieldModel_m = make_unique<EField>();
+	if (EFieldModel_m.size() == 0) //make sure an EField (even if empty) exists
+	{
+		int dev = 0;
+		do
+		{
+			#ifdef GPU
+			cudaSetDevice(dev);
+			#endif // GPU
+
+			EFieldModel_m.push_back( make_unique<EField>() );
+			dev++;
+		} while (dev < gpuCount_m);
+
+	}
 	
 	if (tempSats_m.size() > 0)
 	{//create satellites 
@@ -230,14 +242,14 @@ void Simulation::iterateSimulation(size_t numberOfIterations, size_t checkDoneEv
 	//
 	//
 	//
-
+	int devNumb = 0; //Eventually loopover device count
 	printSimAttributes(numberOfIterations, checkDoneEvery, gpuprop.name);
 	
 	Log_m->createEntry("Start Iteration of Sim:  " + to_string(numberOfIterations));
 	
 	//convert particle vperp data to mu
 	for (auto& part : particles_m)
-		vperpMuConvert_d <<< part->getNumberOfParticles() / BLOCKSIZE, BLOCKSIZE >>> (part->getCurrDataGPUPtr(), BFieldModel_m->this_dev(), part->mass(), true);
+		vperpMuConvert_d <<< part->getNumberOfParticles() / BLOCKSIZE, BLOCKSIZE >>> (part->getCurrDataGPUPtr(), BFieldModel_m.at(devNumb)->this_dev(), part->mass(), true);
 	CUDA_KERNEL_ERRCHK_WSYNC();
 
 	//Setup on GPU variable that checks to see if any threads still have a particle in sim and if not, end iterations early
@@ -252,8 +264,8 @@ void Simulation::iterateSimulation(size_t numberOfIterations, size_t checkDoneEv
 		
 		for (auto part = particles_m.begin(); part < particles_m.end(); part++)
 		{
-			iterateParticle <<< (*part)->getNumberOfParticles() / BLOCKSIZE, BLOCKSIZE >>> ((*part)->getCurrDataGPUPtr(), BFieldModel_m->this_dev(), EFieldModel_m->this_dev(),
-				simTime_m, dt_m, (*part)->mass(), (*part)->charge(), simMin_m, simMax_m);
+			iterateParticle <<< (*part)->getNumberOfParticles() / BLOCKSIZE, BLOCKSIZE >>> ((*part)->getCurrDataGPUPtr(), BFieldModel_m.at(devNumb)->this_dev(), EFieldModel_m.at(devNumb)->this_dev(),
+				simTime_m, dt_m, (*part)->mass(), (*part)->charge(), simMin_m, simMax_m, (*part)->getNumberOfParticles());
 			
 			//kernel will set boolean to false if at least one particle is still in sim
 			if (cudaloopind % checkDoneEvery == 0)
@@ -262,8 +274,12 @@ void Simulation::iterateSimulation(size_t numberOfIterations, size_t checkDoneEv
 
 		CUDA_KERNEL_ERRCHK_WSYNC_WABORT(); //side effect: cudaDeviceSynchronize() needed for computeKernel to function properly, which this macro provides
 
-		for (auto sat = satPartPairs_m.begin(); sat < satPartPairs_m.end(); sat++)
-			(*sat)->satellite->iterateDetector(simTime_m, dt_m, BLOCKSIZE);
+		for (auto sat = satPartPairs_m.begin(); sat < satPartPairs_m.end(); sat += gpuCount_m)
+		{
+			cudaSetDevice(devNumb);
+
+			(*(sat + devNumb))->satellite->iterateDetector(simTime_m, dt_m, BLOCKSIZE);
+		}
 		
 		if (cudaloopind % checkDoneEvery == 0)
 		{
@@ -308,10 +324,13 @@ void Simulation::iterateSimulation(size_t numberOfIterations, size_t checkDoneEv
 
 	//Convert particle, satellite mu data to vperp
 	for (auto part = particles_m.begin(); part < particles_m.end(); part++)
-		vperpMuConvert_d <<< (*part)->getNumberOfParticles() / BLOCKSIZE, BLOCKSIZE >>> ((*part)->getCurrDataGPUPtr(), BFieldModel_m->this_dev(), (*part)->mass(), false); //nullptr will need to be changed if B ever becomes time dependent, would require loop to record when it stops tracking the particle
+		vperpMuConvert_d <<< (*part)->getNumberOfParticles() / BLOCKSIZE, BLOCKSIZE >>> ((*part)->getCurrDataGPUPtr(), BFieldModel_m.at(devNumb)->this_dev(), (*part)->mass(), false); //nullptr will need to be changed if B ever becomes time dependent, would require loop to record when it stops tracking the particle
 
-	for (auto sat = satPartPairs_m.begin(); sat < satPartPairs_m.end(); sat++)
-		vperpMuConvert_d <<< (*sat)->particle->getNumberOfParticles() / BLOCKSIZE, BLOCKSIZE >>>  ((*sat)->satellite->get2DDataGPUPtr(), BFieldModel_m->this_dev(), (*sat)->particle->mass(), false, 3);
+	for (auto sat = satPartPairs_m.begin(); sat < satPartPairs_m.end(); sat += gpuCount_m)
+	{
+		cudaSetDevice(devNumb);
+		vperpMuConvert_d <<< (*(sat + devNumb))->particle->getNumberOfParticles() / BLOCKSIZE, BLOCKSIZE >>>  ((*sat)->satellite->get2DDataGPUPtr(), BFieldModel_m.at(devNumb)->this_dev(), (*sat)->particle->mass(), false, 3);
+	}
 
 	//Copy data back to host
 	LOOP_OVER_1D_ARRAY(getNumberOfParticleTypes(), particles_m.at(iii)->copyDataToHost());
@@ -336,4 +355,41 @@ void Simulation::freeGPUMemory()
 	if (!dataOnGPU_m) { return; }
 
 	CUDA_API_ERRCHK(cudaProfilerStop()); //For profiling with the CUDA bundle
+}
+
+void Simulation::setupGPU()
+{
+	cudaDeviceProp devProp;
+	int gpuCount	 = 0;
+	int computeTotal = 0;
+
+	// Get total number of NVIDIA GPUs
+	if (CUDA_API_ERRCHK(cudaGetDeviceCount(&gpuCount)))
+	{
+		cout << "Error: cannot get GPU count.  Only default GPU used.  Assuming at least one CUDA capable device.\n";
+		computeSplit_m.push_back(1);
+		gpuCount_m = 1;
+		return;
+	}
+
+	// Store the count of the total number of GPUs
+	gpuCount_m = gpuCount;
+
+	// Iterate over each GPU and determine how much data it can handle
+	for (int gpu = 0; gpu < gpuCount; gpu++)
+	{
+		// Get the GPU Speed
+		CUDA_API_ERRCHK(cudaGetDeviceProperties(&devProp, gpu));
+
+		// For now speed number of multiprocessors * clock speed
+		// In future: either optimize for specific hardware create a more precise equation
+		int compute = devProp.clockRate * devProp.multiProcessorCount;
+		computeTotal += compute;
+		computeSplit_m.push_back(compute);
+	}
+	// Iterate through computeSplit and get percent ratio work each device will get
+	for (int i = 0; i < computeSplit_m.size(); ++i)
+	{
+		computeSplit_m.at(i) /= computeTotal;
+	}
 }
