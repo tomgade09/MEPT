@@ -3,7 +3,6 @@
 #include "Simulation/Environment.h"
 #include "ErrorHandling/cudaErrorCheck.h"
 
-#define cDP cudaDeviceProp
 #define Env Environment
 #define EnC Environment::CPU
 #define EnG Environment::GPU
@@ -18,7 +17,7 @@ using std::logic_error;
 //
 // ================ Environment ================ //
 //
-Environment::Environment(int numOfElements) : numOfElements_m{ numOfElements }
+Environment::Environment(size_t numParticles) : numParticles_m{ numParticles }
 {
 	cpus_m.push_back(CPU());
 
@@ -37,21 +36,13 @@ Environment::Environment(int numOfElements) : numOfElements_m{ numOfElements }
 	}
 
 	cudaSetDevice(0);
+	
 
-	taskSplit(); //not as efficient as I would like...
-				 //splits tasks evenly between all devices (which default to use_m = true)
-				 //later if/when the user decides to manually add speeds calculated themselves
-				 //(which should be done for now), this leads to taskSplit() being called twice
-				 //This is basically useless because it's recommended to change speeds
-				 //but it's the only way to ensure that speeds / indicies are assigned out to each device
-				 //- that is - if I remove this and a user doesn't set speeds (invoking taskSplit())
-				 //indicies will remain default of -1 - which will throw an exception when used in code
-				 //Later, a more robust speed testing needs to be developed, or the user needs to be forced
-				 //to supply their own speeds on instantiation of an Environment instance
+	taskSplit();
 }
 
 // ---------------- Environment::Private ---------------- //
-/*void Env::taskSplit()  //removed in favor of getBlockAlignedSize
+void Env::taskSplit()
 {
 	for (auto& elem : gpus_m)
 		if (elem.use_m && elem.speed_m == 0) elem.speedTest();
@@ -100,15 +91,14 @@ Environment::Environment(int numOfElements) : numOfElements_m{ numOfElements }
 		cerr << "Diff   : " << elemDiff << "\n";
 		cpus_m.back().dataEndIdx_m = numOfElements_m - 1;
 	}
-}*/
+}
 
 // ---------------- Environment::Public ---------------- //
 void Env::useCPU(bool use, size_t cpunum) //cpunum default = 0
 {
 	if (cpunum < cpus_m.size() - 1)
 	{
-		cout << "Invalid CPU num: " << cpunum << " Returning without changing.\n";
-		//cerr << "Some Logged Error\n";
+		cerr << "Invalid CPU num: " << cpunum << " Returning without changing.\n";
 		return;
 	}
 	cout << "CPU use alongside GPU not implemented yet\n";
@@ -122,8 +112,7 @@ void Env::useGPU(bool use, size_t gpunum) //gpunum default = 0
 {
 	if (gpunum < gpus_m.size() - 1)
 	{
-		cout << "Invalid GPU num: " << gpunum << " Returning without changing.\n";
-		//cerr << "Some Logged Error\n";
+		cerr << "Invalid GPU num: " << gpunum << " Returning without changing.\n";
 		return;
 	}
 	
@@ -135,14 +124,12 @@ void Env::setSpeed(const vector<int>& cpuspd, const vector<int>& gpuspd)
 {
 	if (gpuspd.size() != gpus_m.size())
 	{
-		cout << "Invalid GPU speed size.  No changes made to speed.\n";
-		//cerr << "Some Logged Error\n";
+		cerr << "Invalid GPU speed size.  No changes made to speed.\n";
 		return;
 	}
 	if (cpuspd.size() != cpus_m.size())
 	{
-		cout << "Invalid CPU speed size.  No changes made to speed.\n";
-		//cerr << "Some Logged Error\n";
+		cerr << "Invalid CPU speed size.  No changes made to speed.\n";
 		return;
 	}
 
@@ -332,4 +319,4 @@ void EnG::setBlockSize(int blocksize)
 // ---------------- Environment::GPU::Public ---------------- //
 int EnG::speed() const { return speed_m; }
 bool EnG::use()  const { return use_m; }
-cDP EnG::props() const { return gpuProps_m; }
+cudaDeviceProp EnG::props() const { return gpuProps_m; }
