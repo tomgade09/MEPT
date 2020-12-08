@@ -31,7 +31,7 @@ namespace physics
 
 void Simulation::__iterateSimCPU(size_t numberOfIterations, size_t checkDoneEvery)
 {
-	printSimAttributes(numberOfIterations, checkDoneEvery, "CPU");
+	printSimAttributes(numberOfIterations, checkDoneEvery);
 
 	using namespace physics;
 	for (auto part = particles_m.begin(); part < particles_m.end(); part++)
