@@ -22,15 +22,28 @@ using utils::fileIO::readFltBin;
 using utils::fileIO::writeFltBin;
 using namespace utils::fileIO::serialize;
 
-Satellite::Satellite(string name, vector<string> attributeNames, meters altitude, bool upwardFacing, size_t numberOfParticles, float** partDataGPUPtr) :
-	name_m{ name }, attributeNames_m{ attributeNames }, altitude_m{ altitude }, upwardFacing_m{ upwardFacing }, numberOfParticles_m{ numberOfParticles }, particleData2D_d{ partDataGPUPtr }
+Satellite::Satellite(string name, vector<string> attributeNames, meters altitude, bool upwardFacing, size_t numberOfParticles, const std::shared_ptr<Particles> &particle, size_t numGPUs, vector<size_t> particleCountPerGPU) :
+	name_m{ name }, attributeNames_m{ attributeNames }, altitude_m{ altitude }, upwardFacing_m{ upwardFacing }, numberOfParticles_m{ numberOfParticles }, numGPUs_m{ numGPUs }, particleCountPerGPU_m{particleCountPerGPU}
 {
+	data_GPU_m.clear();
+	for (int dev = 0; dev < numGPUs; ++dev)
+	{
+		particleData2D_d.push_back(particle->getCurrDataGPUPtr(dev));
+		data_GPU_m.push_back( vector<vector<float>>(attributeNames_m.size(), vector<float>(particleCountPerGPU.at(dev))));
+	}
 	data_m = vector<vector<float>>(attributeNames_m.size(), vector<float>(numberOfParticles_m));
 	initializeGPU();
 }
 
-Satellite::Satellite(ifstream& in, float** particleData2D) : particleData2D_d{ particleData2D }
+Satellite::Satellite(ifstream& in, const std::shared_ptr<Particles> &particle, size_t numGPUs, vector<size_t> particleCountPerGPU) 
+	: numGPUs_m {numGPUs}, particleCountPerGPU_m{particleCountPerGPU}
 {
+	data_GPU_m.clear();
+	for (int dev = 0; dev < numGPUs; ++dev)
+	{
+		particleData2D_d.push_back(particle->getCurrDataGPUPtr(dev));
+		data_GPU_m.push_back(vector<vector<float>>(attributeNames_m.size(), vector<float>(particleCountPerGPU.at(dev))));
+	}
 	deserialize(in);
 
 	data_m = vector<vector<float>>(attributeNames_m.size(), vector<float>(numberOfParticles_m));
@@ -44,7 +57,12 @@ Satellite::~Satellite()
 
 void Satellite::initializeGPU()
 {
-	utils::GPU::setup2DArray(&satCaptrData1D_d, &satCaptrData2D_d, attributeNames_m.size(), numberOfParticles_m);
+	for (int dev = 0; dev < numGPUs_m; ++dev)
+	{
+		satCaptrData1D_d.push_back(nullptr);
+		satCaptrData2D_d.push_back(nullptr);
+		utils::GPU::setup2DArray(&satCaptrData1D_d.at(dev), &satCaptrData2D_d.at(dev), attributeNames_m.size(), numberOfParticles_m, dev);
+	}
 	initializedGPU_m = true;
 }
 
@@ -64,17 +82,39 @@ size_t Satellite::getAttrIndByName(string name)
 
 void Satellite::copyDataToHost()
 {// data_m array: [v_para, mu, s, time, partindex][particle number]
+	//vector<vector<float>>  data; //[attribute][particle]
+	//data_m.clear();
 
-	utils::GPU::copy2DArray(data_m, &satCaptrData1D_d, false);
+	for (int dev = 0; dev < numGPUs_m; ++dev)
+	{
+		// Copy data in data_m arrays
+		utils::GPU::copy2DArray(data_GPU_m.at(dev), &satCaptrData1D_d.at(dev), false);
+
+		// Copy data into data_m
+		//data_m.reserve(data_m.size() + data.size());
+		//data_m.insert(data_m.end(), data.begin(), data.end());// std::make_move_iterator(data.begin()), std::make_move_iterator(data.end()));
+		//data.clear();
+	}
+	data_m = data_GPU_m.at(0);
+	for (int dev = 1; dev < numGPUs_m; ++dev)
+	{
+		
+		// Copy data_m arrays into data_m array
+		data_m.reserve(data_m.size() + data_GPU_m.at(dev).size());
+		data_m.insert(data_m.end(), data_GPU_m.at(dev).begin(), data_GPU_m.at(dev).end());// std::make_move_iterator(data.begin()), std::make_move_iterator(data.end()));
+	}
 }
 
 void Satellite::freeGPUMemory()
 {
 	if (!initializedGPU_m) { return; }
 
-	utils::GPU::free2DArray(&satCaptrData1D_d, &satCaptrData2D_d);
+	for (int dev = 0; dev < numGPUs_m; ++dev)
+	{
+		utils::GPU::free2DArray(&satCaptrData1D_d.at(dev), &satCaptrData2D_d.at(dev));
+	}
 
-	particleData2D_d = nullptr;
+	particleData2D_d.clear();
 	initializedGPU_m = false;
 }
 
@@ -187,12 +227,12 @@ const vector<vector<float>>& Satellite::data() const
 
 float** Satellite::get2DDataGPUPtr(int GPUind) const
 {
-	return satCaptrData2D_d;//.at(GPUind);
+	return satCaptrData2D_d.at(GPUind);
 }
 
 float* Satellite::get1DDataGPUPtr(int GPUind) const
 {
-	return satCaptrData1D_d;//.at(GPUind);
+	return satCaptrData1D_d.at(GPUind);
 }
 
 size_t Satellite::getNumberOfAttributes() const

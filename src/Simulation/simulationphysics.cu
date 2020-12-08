@@ -263,6 +263,7 @@ void Simulation::iterateSimulation(size_t numberOfIterations, size_t checkDoneEv
 	size_t initEntry{ Log_m->createEntry("Iteration 1", false) };
 	for (size_t cudaloopind = 0; cudaloopind < numberOfIterations; cudaloopind++)
 	{
+		//std::cout << "iteration " << cudaloopind << endl;
 		for (int dev = 0; dev < gpuCount_m; dev++) //iterate over devices - everything is non-blocking / async in loop
 		{
 			CUDA_API_ERRCHK(cudaSetDevice((int)dev));
@@ -286,11 +287,11 @@ void Simulation::iterateSimulation(size_t numberOfIterations, size_t checkDoneEv
 			CUDA_KERNEL_ERRCHK_WSYNC_WABORT();   //side effect: cudaDeviceSynchronize() needed for computeKernel to function properly, which this macro provides
 		}
 
-		for (int dev; dev < gpuCount_m; dev++)
+		for (int dev = 0; dev < gpuCount_m; dev++)
 		{
-			for (auto sat = satPartPairs_m.begin(); sat < satPartPairs_m.end(); sat += gpuCount_m)
+			for (auto sat = satPartPairs_m.begin(); sat < satPartPairs_m.end(); sat++)
 			{
-				//(*sat)->satellite->iterateDetector(simTime_m, dt_m, BLOCKSIZE, dev);
+				(*sat)->satellite->iterateDetector(simTime_m, dt_m, BLOCKSIZE, dev);
 				//CUDA_KERNEL_ERRCHK_WSYNC_WABORT();
 			}
 		}
@@ -350,7 +351,9 @@ void Simulation::iterateSimulation(size_t numberOfIterations, size_t checkDoneEv
 		{
 			SatandPart* sat{ satPartPairs_m.at(s).get() };
 			CUDA_API_ERRCHK(cudaSetDevice(dev));
-			vperpMuConvert_d <<< grid.at(dev).at(s), BLOCKSIZE >>> (sat->satellite->get2DDataGPUPtr(dev), BFieldModel_m.at(dev)->this_dev(), sat->particle->mass(), false, 3);
+			// Reverted to old style of getting the grid size 
+			// **The removed way would only have a size of 1 (particles m.size) when satelites were size 4.
+			vperpMuConvert_d <<< sat->particle->getNumParticlesPerGPU(dev) / BLOCKSIZE, BLOCKSIZE >>> (sat->satellite->get2DDataGPUPtr(dev), BFieldModel_m.at(dev)->this_dev(), sat->particle->mass(), false, 3);
 		}
 	}
 

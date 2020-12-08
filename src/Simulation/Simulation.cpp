@@ -144,15 +144,7 @@ int Simulation::getNumberOfParticleTypes() const
 
 int Simulation::getNumberOfSatellites() const
 {
-	if (gpuCount_m > 0)
-	{
-		// Size should be a perfect multiple so don't need to worry about rounding
-		return (int)satPartPairs_m.size() / gpuCount_m;
-	}
-	else
-	{
-		return (int)satPartPairs_m.size();
-	}
+	return (int)satPartPairs_m.size();
 }
 
 int Simulation::getNumberOfParticles(int partInd) const
@@ -327,25 +319,19 @@ void Simulation::createSatellite(TempSat* tmpsat, bool save) //protected
 	size_t dev = 0;
 	// create satelite on all the devices
 	// Satelite array indexed as Sat 1 dev 0-n, Sat 2 dev 0-n, ...
-	do
-	{
-		utils::GPU::setDev(dev);
+	
+	if (particles_m.size() <= partInd)
+		throw out_of_range("createSatellite: no particle at the specifed index " + to_string(partInd));
+	if (particles_m.at(partInd)->getCurrDataGPUPtr(dev) == nullptr)
+		throw runtime_error("createSatellite: pointer to GPU data is a nullptr of particle " + particles_m.at(partInd)->name() + " - that's just asking for trouble");
 
-		if (particles_m.size() <= partInd)
-			throw out_of_range("createSatellite: no particle at the specifed index " + to_string(partInd));
-		if (particles_m.at(partInd)->getCurrDataGPUPtr(dev) == nullptr)
-			throw runtime_error("createSatellite: pointer to GPU data is a nullptr of particle " + particles_m.at(partInd)->name() + " - that's just asking for trouble");
+	Log_m->createEntry("Created Satellite: " + name + ", Particles tracked: " + particles_m.at(partInd)->name()
+		+ ", Altitude: " + to_string(altitude) + ", " + ((upwardFacing) ? "Upward" : "Downward") + " Facing Detector");
 
-		Log_m->createEntry("Created Satellite: " + name + ", Particles tracked: " + particles_m.at(partInd)->name()
-			+ ", Altitude: " + to_string(altitude) + ", " + ((upwardFacing) ? "Upward" : "Downward") + " Facing Detector");
-
-		vector<string> attrNames{ "vpara", "vperp", "s", "time", "index" };
-		shared_ptr<Particles> part{ particles_m.at(partInd) };
-		unique_ptr<Satellite> sat{ make_unique<Satellite>(name, attrNames, altitude, upwardFacing, part->getNumberOfParticles(), part->getCurrDataGPUPtr(dev)) };
-		satPartPairs_m.push_back(make_unique<SatandPart>(move(sat), move(part)));
-
-		dev++;
-	} while (dev < gpuCount_m);
+	vector<string> attrNames{ "vpara", "vperp", "s", "time", "index" };
+	shared_ptr<Particles> part{ particles_m.at(partInd) };
+	unique_ptr<Satellite> sat{ make_unique<Satellite>(name, attrNames, altitude, upwardFacing, part->getNumberOfParticles(), part, gpuCount_m, part->getNumParticlesPerGPU()) };
+	satPartPairs_m.push_back(make_unique<SatandPart>(move(sat), move(part)));
 }
 
 void Simulation::setBFieldModel(string name, vector<float> args, bool save)
@@ -638,7 +624,7 @@ void Simulation::loadSimulation(string saveRootDir)
 
 			satPartPairs_m.push_back(
 				make_unique<SatandPart>(
-					make_unique<Satellite>(in, particles_m.at(part)->getCurrDataGPUPtr()),
+					make_unique<Satellite>(in, particles_m.at(part), gpuCount_m, particles_m.at(part)->getNumParticlesPerGPU()),
 					move(particles)));
 		}
 		else throw std::runtime_error("Simulation::load: Simulation Component not recognized");

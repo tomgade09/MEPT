@@ -172,6 +172,11 @@ size_t Particles::getNumParticlesPerGPU(size_t GPUind) const
 	return particleCountPerGPU_m.at(GPUind);
 }
 
+vector<size_t> Particles::getNumParticlesPerGPU( ) const
+{
+	return particleCountPerGPU_m;
+}
+
 size_t Particles::getNumberOfAttributes() const
 {
 	return attributeNames_m.size();

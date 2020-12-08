@@ -63,7 +63,7 @@ protected:
 	bool previousSim_m{ false };
 
 	//GPU Data
-	int gpuCount_m{ 0 };
+	size_t gpuCount_m{ 0 };
 	vector<float> computeSplit_m;
 	//vector<size_t> grid_m;
 

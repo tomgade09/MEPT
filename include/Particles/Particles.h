@@ -53,20 +53,21 @@ public:
 	Particles& operator=(const Particles& otherpart) = delete;
 
 	//Access functions
-	string        name()           const;
-	const STRVEC& attributeNames() const;
-	FLT2DV&       __data(bool orig);
-	const FLT2DV& data(bool orig) const;
-	float         mass()          const;
-	float         charge()        const;
-	size_t        getNumberOfAttributes() const;
-	size_t        getNumberOfParticles()  const;
-	size_t        getNumParticlesPerGPU(size_t GPUind) const;
-	bool          getInitDataLoaded() const;
-	float**       getCurrDataGPUPtr(size_t GPUind) const;
+	string         name()           const;
+	const STRVEC&  attributeNames() const;
+	FLT2DV&        __data(bool orig);
+	const FLT2DV&  data(bool orig) const;
+	float          mass()          const;
+	float          charge()        const;
+	size_t         getNumberOfAttributes() const;
+	size_t         getNumberOfParticles()  const;
+	size_t         getNumParticlesPerGPU(size_t GPUind) const;
+	vector<size_t> getNumParticlesPerGPU() const;
+	bool           getInitDataLoaded() const;
+	float**        getCurrDataGPUPtr(size_t GPUind) const;
 
-	size_t        getAttrIndByName(string searchName) const;
-	string        getAttrNameByInd(size_t searchIndx) const;
+	size_t         getAttrIndByName(string searchName) const;
+	string         getAttrNameByInd(size_t searchIndx) const;
 
 	//Other functions
 	void setParticlesSource_s(float s_ion, float s_mag);

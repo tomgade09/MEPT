@@ -80,6 +80,6 @@ void Satellite::iterateDetector(float simtime, float dt, int blockSize, int GPUi
 	//	copyDataToHost() - uses offset and end to create a small empty vector that is passed in to copy data back to host
 	//	freeGPUMemory() - frees all devices' GPU mem regions
 	CUDA_API_ERRCHK(cudaSetDevice(GPUind));
-	satelliteDetector<<< numberOfParticles_m / blockSize, blockSize >>>(particleData2D_d, satCaptrData2D_d, simtime, dt, altitude_m, upwardFacing_m);
-	//CUDA_KERNEL_ERRCHK_WSYNC();
+	satelliteDetector<<< numberOfParticles_m / blockSize, blockSize >>>(particleData2D_d.at(GPUind), satCaptrData2D_d.at(GPUind), simtime, dt, altitude_m, upwardFacing_m);
+	CUDA_KERNEL_ERRCHK_WSYNC();
 }

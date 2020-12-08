@@ -5,6 +5,7 @@
 #include <string>
 
 #include "dlldefines.h"
+#include "Particles/Particles.h"
 #include "utils/unitsTypedefs.h"
 
 using std::vector;
@@ -27,13 +28,14 @@ protected:
 	bool   initializedGPU_m{ false };
 
 	size_t numberOfParticles_m{ 0 };
-	//size_t numGPUs_m;
-	//vector<size_t> particleCountPerGPU_m;
+	size_t numGPUs_m;
+	vector<size_t> particleCountPerGPU_m;
 	
 	FLT2DV  data_m; //[attribute][particle]
-	float*  satCaptrData1D_d{ nullptr }; //flattened satellite capture data on GPU
-	float** satCaptrData2D_d{ nullptr }; //2D satellite capture data on GPU
-	float** particleData2D_d{ nullptr };
+	vector<FLT2DV>	data_GPU_m;
+	vector<float*>  satCaptrData1D_d; //flattened satellite capture data on GPU
+	vector<float**> satCaptrData2D_d; //2D satellite capture data on GPU
+	vector<float**> particleData2D_d;
 
 	void   initializeGPU();
 	void   freeGPUMemory();
@@ -41,8 +43,8 @@ protected:
 	size_t getAttrIndByName(string name);
 
 public:
-	Satellite(string name, STRVEC attributeNames, meters altitude, bool upwardFacing, size_t numberOfParticles, float** partDataGPUPtr);
-	Satellite(ifstream& in, float** particleData2D);
+	Satellite(string name, STRVEC attributeNames, meters altitude, bool upwardFacing, size_t numberOfParticles, const std::shared_ptr<Particles>& particle, size_t numGPUs, vector<size_t> particleCountPerGPU_m);
+	Satellite(ifstream& in, const std::shared_ptr<Particles> &particle, size_t numGPUs, vector<size_t> particleCountPerGPU);
 	~Satellite();
 	Satellite(const Satellite&) = delete;
 	Satellite& operator=(const Satellite&) = delete;
