@@ -59,13 +59,13 @@ namespace physics
 		}
 	}
 
-	__device__ __host__ float accel1dCUDA(const float vs_RK, const float t_RK, const float* args, BModel** bmodel, EField* efield) //made to pass into 1D Fourth Order Runge Kutta code
+	__device__ __host__ float accel1dCUDA(const float vs_RK, const float t_RK, const float* args, BModel* bmodel, EField* efield) //made to pass into 1D Fourth Order Runge Kutta code
 	{//args array: [s_0, mu, q, m, simtime]
 		float F_lor, F_mir, stmp;
 		stmp = args[0] + vs_RK * t_RK; //ps_0 + vs_RK * t_RK
 
 		//Mirror force
-		F_mir = -args[1] * (*bmodel)->getGradBAtS(stmp, t_RK + args[4]); //-mu * gradB(pos, runge-kutta time + simtime)
+		F_mir = -args[1] * bmodel->getGradBAtS(stmp, t_RK + args[4]); //-mu * gradB(pos, runge-kutta time + simtime)
 
 		//Lorentz force - simply qE - v x B is taken care of by mu - results in kg.m/s^2 - to convert to Re equivalent - divide by Re
 		F_lor = args[2] * efield->getEFieldAtS(stmp, t_RK + args[4]); //q * EFieldatS
@@ -73,7 +73,7 @@ namespace physics
 		return (F_lor + F_mir) / args[3];
 	}//returns an acceleration in the parallel direction to the B Field
 
-	__device__ __host__ float foRungeKuttaCUDA(const float y_0, const float h, const float* funcArg, BModel** bmodel, EField* efield)
+	__device__ __host__ float foRungeKuttaCUDA(const float y_0, const float h, const float* funcArg, BModel* bmodel, EField* efield)
 	{
 		// dy / dt = f(t, y), y(t_0) = y_0
 		// funcArgs are whatever you need to pass to the equation
@@ -155,10 +155,14 @@ namespace physics
 		//if we use the ds = (v0 * dt), s will be lower down than where it would end up really (due to the fact that the mirror force acting along ds
 		//will slow v down as the particle travels along ds), so I take the average of the two and it seems close enough s = (v0 + (v0 + dv)) / 2 * dt = v0 + dv/2 * dt
 		//hence the /2 factor below - FYI, this was checked by the particle's energy (steady state, no E Field) remaining the same throughout the simulation
-		s0_d[thdInd] = s_d[thdInd];
-		v0_d[thdInd] = v_d[thdInd];
-		v_d[thdInd] += foRungeKuttaCUDA(v_d[thdInd], dt, args, bmodel, efield);
-		s_d[thdInd] += (v_d[thdInd] + v0_d[thdInd]) / 2 * dt;
+
+		float v{ v_d[thdInd] };
+		float v_pr{ v + foRungeKuttaCUDA(v, dt, args, *bmodel, efield) };
+		
+		s0_d[thdInd] = args[0];
+		v0_d[thdInd] = v;
+		v_d[thdInd] = v_pr;
+		s_d[thdInd] = args[0] + (v + v_pr) / 2 * dt;
 	}
 
 	__host__ void iterateParticle(float* vpara, float* mu, float* s, float* t_incident, float* t_escape, BModel* bmodel, EField* efield,
@@ -183,7 +187,7 @@ namespace physics
 		const float args[]{ *s, *mu, charge, mass, simtime };
 
 		float v_orig{ *vpara };
-		*vpara += foRungeKuttaCUDA(*vpara, dt, args, &bmodel, efield);
+		*vpara += foRungeKuttaCUDA(*vpara, dt, args, bmodel, efield);
 		*s += (*vpara + v_orig) / 2 * dt;
 	}
 }
@@ -230,14 +234,15 @@ void Simulation::iterateSimulation(size_t numberOfIterations, size_t checkDoneEv
 	
 	Log_m->createEntry("Start Iteration of Sim:  " + to_string(numberOfIterations));
 
-	vector<vector<size_t>> grid(gpuCount_m);
-	
 	//convert particle vperp data to mu
+	vector<vector<size_t>> grid(gpuCount_m); //save grid size so it doesn't have to be recomputed every time
 	for (int dev = 0; dev < gpuCount_m; dev++)
 	{
+		cudaSetDevice(dev);
 		for (auto& part : particles_m)
-		{
+		{   //getNumParticlesPerGPU will return a block aligned size - so we don't have to check for spillover
 			grid.at(dev).push_back(part->getNumParticlesPerGPU(dev) / BLOCKSIZE);
+			Log_m->createEntry("GPU " + to_string(dev) + ": Number of blocks: " + to_string(grid.at(dev).back()));
 			vperpMuConvert_d <<< grid.at(dev).back(), BLOCKSIZE >>> (part->getCurrDataGPUPtr(dev), BFieldModel_m.at(dev)->this_dev(), part->mass(), true);
 		}
 		CUDA_KERNEL_ERRCHK_WSYNC();
@@ -246,16 +251,12 @@ void Simulation::iterateSimulation(size_t numberOfIterations, size_t checkDoneEv
 	//Setup on GPU variable that checks to see if any threads still have a particle in sim and if not, end iterations early
 	vector<bool*> simDone_d;  //setup is done in loop below
 
-	//Create streams for each available GPU
-	//vector<cudaStream_t> streams;
-	for (int i = 0; i < gpuCount_m; i++)
+	//Create pointers to device bools
+	for (int dev = 0; dev < gpuCount_m; dev++)
 	{
-		CUDA_API_ERRCHK(cudaSetDevice(i));
-		//streams.push_back(cudaStream_t());
-		//CUDA_API_ERRCHK(cudaStreamCreate(&streams.at(i)));
-
+		CUDA_API_ERRCHK(cudaSetDevice(dev));
 		simDone_d.push_back(nullptr);
-		CUDA_API_ERRCHK(cudaMalloc((void**)&(simDone_d.at(i)), sizeof(bool)));
+		CUDA_API_ERRCHK(cudaMalloc((void**)&(simDone_d.at(dev)), sizeof(bool)));
 	}
 	
 	//Loop code
@@ -271,7 +272,7 @@ void Simulation::iterateSimulation(size_t numberOfIterations, size_t checkDoneEv
 			{
 				Particles* p{ particles_m.at(part).get() };
 				iterateParticle <<< grid.at(dev).at(part), BLOCKSIZE >>> (p->getCurrDataGPUPtr(dev), BFieldModel_m.at(dev)->this_dev(), EFieldModel_m.at(dev)->this_dev(),
-					simTime_m, dt_m, p->mass(), p->charge(), simMin_m, simMax_m, p->getNumberOfParticles());
+					simTime_m, dt_m, p->mass(), p->charge(), simMin_m, simMax_m, p->getNumParticlesPerGPU(dev));
 
 				//kernel will set boolean to false if at least one particle is still in sim
 				if (cudaloopind % checkDoneEvery == 0)
@@ -316,7 +317,7 @@ void Simulation::iterateSimulation(size_t numberOfIterations, size_t checkDoneEv
 			for (int dev = 0; dev < gpuCount_m; dev++)
 			{
 				bool tmp{ false };
-				CUDA_API_ERRCHK(cudaMemcpy(&done, simDone_d.at(dev), sizeof(bool), cudaMemcpyDeviceToHost));
+				CUDA_API_ERRCHK(cudaMemcpy(&tmp, simDone_d.at(dev), sizeof(bool), cudaMemcpyDeviceToHost));
 				if (!tmp) done = false;
 			}
 			if (done)
@@ -426,7 +427,7 @@ vector<size_t> Simulation::getSplitSize(size_t numOfParticles)
 
 	auto getBlockAlignedCount = [](size_t count)
 	{
-		size_t ret{ 0 };
+		size_t ret{ count };
 		float bs{ static_cast<float>(BLOCKSIZE) };
 		
 		if (count % BLOCKSIZE)
@@ -450,7 +451,6 @@ vector<size_t> Simulation::getSplitSize(size_t numOfParticles)
 	}
 
 	//above code creates particle count in multiples of blocksize
-	
 	size_t diff{ 0 };
 	if (total < numOfParticles)  //check that we aren't missing particles or have extra blocks
 	{
@@ -465,7 +465,7 @@ vector<size_t> Simulation::getSplitSize(size_t numOfParticles)
 		}
 		
 		//less than one full block of unaccounted for particles remains.  Add one block
-		particleSplit.at(0) += gpuCount_m;
+		particleSplit.at(0) += BLOCKSIZE;
 	}
 	else if (total > numOfParticles)
 	{

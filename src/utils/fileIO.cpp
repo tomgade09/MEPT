@@ -15,45 +15,44 @@ namespace utils
 {
 	namespace fileIO
 	{
-		DLLEXP void readDblBin(vector<float>& arrayToReadInto, string filename)
+		DLLEXP void readFltBin(vector<float>& arrayToReadInto, string filename)
 		{
 			std::ifstream binFile{ filename, std::ios::binary };
 			if (!binFile.is_open())
-				throw std::invalid_argument("fileIO::readDblBin: could not open file " + filename + " for reading");
+				throw std::invalid_argument("fileIO::readFltBin: could not open file " + filename + " for reading");
 
 			binFile.seekg(0, binFile.end);
-			size_t length{ (size_t)binFile.tellg() / 8 };
+			size_t length{ (size_t)binFile.tellg() / sizeof(float) };
 			binFile.seekg(0, binFile.beg);
 			binFile.close();
-			//std::cout << "fileIO::readDblBin: (unknown size): num elements determined from disk: " << length << std::endl;
 
 			arrayToReadInto.resize(length);
 
-			readDblBin(arrayToReadInto, filename, length);
+			readFltBin(arrayToReadInto, filename, length);
 		}
 
-		DLLEXP void readDblBin(vector<float>& arrayToReadInto, string filename, size_t numOfDblsToRead)
+		DLLEXP void readFltBin(vector<float>& arrayToReadInto, string filename, size_t numOfFltsToRead)
 		{
-			if (arrayToReadInto.size() < numOfDblsToRead)
-				throw std::invalid_argument("fileIO::readDblBin: vector is not big enough to contain the data being read from file " + filename);
+			if (arrayToReadInto.size() < numOfFltsToRead)
+				throw std::invalid_argument("fileIO::readFltBin: vector is not big enough to contain the data being read from file " + filename);
 
 			std::ifstream binFile{ filename, std::ios::binary };
 			if (!binFile.is_open())
-				throw std::invalid_argument("fileIO::readDblBin: could not open file " + filename + " for reading");
+				throw std::invalid_argument("fileIO::readFltBin: could not open file " + filename + " for reading");
 
 			binFile.seekg(0, binFile.end);
 			size_t length{ (size_t)binFile.tellg() };
 			binFile.seekg(0, binFile.beg);
 
-			if (length < numOfDblsToRead * 8)
+			if (length < numOfFltsToRead * sizeof(float))
 			{
 				binFile.close();
-				throw std::invalid_argument("fileIO::readDblBin: filesize of \"" + filename + "\" is smaller than specified number of floats to read");
+				throw std::invalid_argument("fileIO::readFltBin: filesize of \"" + filename + "\" is smaller than specified number of floats to read");
 			}
-			if (length > numOfDblsToRead * 8)
-				std::cerr << "fileIO::readDblBin: warning: size of data read is less than the size of all data in file " << filename << ": continuing" << std::endl;
+			if (length > numOfFltsToRead * sizeof(float))
+				std::cerr << "fileIO::readFltBin: warning: size of data read is less than the size of all data in file " << filename << ": continuing" << std::endl;
 
-			binFile.read(reinterpret_cast<char*>(arrayToReadInto.data()), std::streamsize(numOfDblsToRead * sizeof(float)));
+			binFile.read(reinterpret_cast<char*>(arrayToReadInto.data()), std::streamsize(numOfFltsToRead * sizeof(float)));
 			binFile.close();
 		}
 
@@ -119,15 +118,15 @@ namespace utils
 
 
 		//write functions
-		DLLEXP void writeDblBin(const vector<float>& dataarray, string filename, size_t numelements, bool overwrite)//overwrite defaults to true
+		DLLEXP void writeFltBin(const vector<float>& dataarray, string filename, size_t numelements, bool overwrite)//overwrite defaults to true
 		{
 			std::ofstream binfile{ filename, std::ios::binary | (overwrite ? (std::ios::trunc) : (std::ios::app)) };
 			if (!binfile.is_open())
-				throw std::invalid_argument("fileIO::writeDblBin: could not open file " + filename + " for writing");
+				throw std::invalid_argument("fileIO::writeFltBin: could not open file " + filename + " for writing");
 			if (dataarray.size() < numelements)
 			{
 				binfile.close();
-				throw std::invalid_argument("fileIO::writeDblBin: size of data vector is less than the number of floats requested from it for filename " + filename);
+				throw std::invalid_argument("fileIO::writeFltBin: size of data vector is less than the number of floats requested from it for filename " + filename);
 			}
 
 			binfile.write(reinterpret_cast<const char*>(dataarray.data()), std::streamsize(numelements * sizeof(float)));

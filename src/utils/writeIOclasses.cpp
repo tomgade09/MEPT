@@ -357,7 +357,7 @@ namespace utils
 			try
 			{
 				for (size_t attr = 0; attr < data.size(); attr++)
-					fileIO::writeDblBin(data.at(attr), saveFolder_m + "/" + particleName_m + "_" + attrNames_m.at(attr) + ".bin", data.at(0).size());
+					fileIO::writeFltBin(data.at(attr), saveFolder_m + "/" + particleName_m + "_" + attrNames_m.at(attr) + ".bin", data.at(0).size());
 			}
 			catch (exception& e)
 			{

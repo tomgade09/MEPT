@@ -35,8 +35,6 @@ Simulation::Simulation(float dt, float simMin, float simMax) :
 	stringstream dataout;
 	auto in_time_t = system_clock::to_time_t(system_clock::now());
 	dataout << "../_dataout/" << put_time(localtime(&in_time_t), "%C%m%d_%H.%M.%S/");
-	cout << "===============================================================" << "\n";
-	cout << "Data Folder:    " << dataout.str() << "\n";
 
 	path datadir{ dataout.str() };
 	if (!exists(datadir))
@@ -78,7 +76,6 @@ Simulation::~Simulation()
 {
 	SIM_API_EXCEP_CHECK(if (!previousSim_m) saveSimulation());
 	if (!previousSim_m && saveReady_m) saveDataToDisk(); //save data if it hasn't been done
-	else if (!previousSim_m) cerr << "Warning: Simulation::~Simulation: saveReady_m is false.";
 	Log_m->createEntry("End simulation");
 }
 
@@ -86,11 +83,13 @@ Simulation::~Simulation()
 void Simulation::printSimAttributes(int numberOfIterations, int itersBtwCouts) //protected
 {
 	//Sim Header (folder) printed from Python - move here eventually
+	cout << "===============================================================" << "\n";
+	cout << "Data Folder:    " << saveRootDir_m << "\n";
 	cout << "GPU(s) In Use:  " << utils::GPU::getDeviceNames() << endl;
 	cout << "Sim between:    " << simMin_m << "m - " << simMax_m << "m" << endl;
 	cout << "dt:             " << dt_m << "s" << endl;
 	cout << "BModel Model:   " << BFieldModel_m.at(0)->name() << endl;
-	cout << "EField Elems:   " << ((Efield()->qspsCount() > 0) ? "QSPS: " + to_string(Efield()->qspsCount()) : "") << endl;
+	cout << "EField Elems:   " << ((Efield()->qspsCount() > 0) ? "QSPS" : "") << endl;
 	cout << "Particles:      ";
 	for (size_t iii = 0; iii < particles_m.size(); iii++)
 	{
@@ -368,8 +367,8 @@ void Simulation::setBFieldModel(string name, vector<float> args, bool save)
 			if (args.size() == 1)
 			{ //for defaults in constructor of DipoleB
 				BFieldModel_m.push_back( make_unique<DipoleB>(args.at(0)) );
-				args.push_back(((DipoleB*)BFieldModel_m.at(dev).get())->getErrTol());
-				args.push_back(((DipoleB*)BFieldModel_m.at(dev).get())->getds());
+				args.push_back(dynamic_cast<DipoleB*>(BFieldModel_m.at(dev).get())->getErrTol());
+				args.push_back(dynamic_cast<DipoleB*>(BFieldModel_m.at(dev).get())->getds());
 			}
 			else if (args.size() == 3)
 				BFieldModel_m.push_back( make_unique<DipoleB>(args.at(0), args.at(1), args.at(2)) );
@@ -392,8 +391,8 @@ void Simulation::setBFieldModel(string name, vector<float> args, bool save)
 			cout << "Not sure what model is being referenced.  Using DipoleB instead of " << name << endl;
 			BFieldModel_m.push_back( make_unique<DipoleB>(args.at(0)) );
 			args.resize(3);
-			args.at(1) = ((DipoleB*)BFieldModel_m.at(dev).get())->getErrTol();
-			args.at(1) = ((DipoleB*)BFieldModel_m.at(dev).get())->getds();
+			args.at(1) = dynamic_cast<DipoleB*>(BFieldModel_m.at(dev).get())->getErrTol();
+			args.at(2) = dynamic_cast<DipoleB*>(BFieldModel_m.at(dev).get())->getds();
 			attrNames = { "ILAT", "ds", "errTol" };
 		}
 		dev++;

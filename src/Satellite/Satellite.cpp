@@ -18,8 +18,8 @@ using std::logic_error;
 using std::runtime_error;
 using std::invalid_argument;
 
-using utils::fileIO::readDblBin;
-using utils::fileIO::writeDblBin;
+using utils::fileIO::readFltBin;
+using utils::fileIO::writeFltBin;
 using namespace utils::fileIO::serialize;
 
 Satellite::Satellite(string name, vector<string> attributeNames, meters altitude, bool upwardFacing, size_t numberOfParticles, float** partDataGPUPtr) :
@@ -103,15 +103,15 @@ void Satellite::saveDataToDisk(string folder) //move B and mass to getConsolidat
 	vector<vector<float>> results{ removeZerosData() };
 
 	for (size_t attr = 0; attr < results.size(); attr++)
-		writeDblBin(results.at(attr), folder + name_m + "_" + attributeNames_m.at(attr) + ".bin", results.at(attr).size());
+		writeFltBin(results.at(attr), folder + name_m + "_" + attributeNames_m.at(attr) + ".bin", results.at(attr).size());
 }
 
 void Satellite::loadDataFromDisk(string folder)
 {
-	data_m = vector<vector<float>>(attributeNames_m.size()); //this is done so readDblBin doesn't assume how many particles it's reading
+	data_m = vector<vector<float>>(attributeNames_m.size()); //this is done so readFltBin doesn't assume how many particles it's reading
 
 	for (size_t attr = 0; attr < attributeNames_m.size(); attr++)
-		readDblBin(data_m.at(attr), folder + name_m + "_" + attributeNames_m.at(attr) + ".bin");
+		readFltBin(data_m.at(attr), folder + name_m + "_" + attributeNames_m.at(attr) + ".bin");
 
 	bool expand{ false };
 	if (data_m.at(0).size() == static_cast<size_t>(numberOfParticles_m))

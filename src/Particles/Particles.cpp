@@ -18,8 +18,8 @@ using std::logic_error;
 using std::runtime_error;
 using std::invalid_argument;
 
-using utils::fileIO::readDblBin;
-using utils::fileIO::writeDblBin;
+using utils::fileIO::readFltBin;
+using utils::fileIO::writeFltBin;
 using namespace utils::fileIO::serialize;
 
 Particles::Particles(string name, vector<string> attributeNames, float mass, float charge, size_t numParts,
@@ -242,8 +242,6 @@ void Particles::generateDist(size_t numEbins, eV E_min, eV E_max, size_t numPAbi
 
 void Particles::loadDistFromPD(const ParticleDistribution& pd, meters s_ion, meters s_mag)
 {
-	//std::cout << "Particles::loadDistFromPD(ParticleDistribution, s_ion: " << s_ion << ", s_mag: " << s_mag << ")\n";
-
 	origData_m = pd.generate(s_ion, s_mag);
 
 	initDataLoaded_m = true;
@@ -252,8 +250,6 @@ void Particles::loadDistFromPD(const ParticleDistribution& pd, meters s_ion, met
 
 void Particles::loadDistFromPD(const ParticleDistribution& pd, vector<meters>& s)
 {
-	//std::cout << "Particles::loadDistFromPD(ParticleDistribution, s vector)\n";
-
 	origData_m = pd.generate(s);
 
 	initDataLoaded_m = true;
@@ -287,7 +283,7 @@ void Particles::loadDataFromMem(vector<vector<float>> data, bool orig) //orig de
 void Particles::loadDataFromDisk(string folder, bool orig) //orig defaults to true
 {
 	for (size_t attrs = 0; attrs < attributeNames_m.size(); attrs++)
-		FILE_RDWR_EXCEP_CHECK(readDblBin((orig ? origData_m.at(attrs) : currData_m.at(attrs)), folder + "/" + name_m + "_" + attributeNames_m.at(attrs) + ".bin", numberOfParticles_m));
+		FILE_RDWR_EXCEP_CHECK(readFltBin((orig ? origData_m.at(attrs) : currData_m.at(attrs)), folder + "/" + name_m + "_" + attributeNames_m.at(attrs) + ".bin", numberOfParticles_m));
 
 	if (orig) initDataLoaded_m = true; //copyDataToGPU uses this flag to ensure data is present in origData_m
 	if (orig) copyDataToGPU();
@@ -296,7 +292,7 @@ void Particles::loadDataFromDisk(string folder, bool orig) //orig defaults to tr
 void Particles::saveDataToDisk(string folder, bool orig) const
 {
 	for (size_t attrs = 0; attrs < attributeNames_m.size(); attrs++)
-		FILE_RDWR_EXCEP_CHECK(writeDblBin((orig ? origData_m.at(attrs) : currData_m.at(attrs)), folder + "/" + name_m + "_" + attributeNames_m.at(attrs) + ".bin", numberOfParticles_m));
+		FILE_RDWR_EXCEP_CHECK(writeFltBin((orig ? origData_m.at(attrs) : currData_m.at(attrs)), folder + "/" + name_m + "_" + attributeNames_m.at(attrs) + ".bin", numberOfParticles_m));
 }
 
 void Particles::serialize(ofstream& out) const

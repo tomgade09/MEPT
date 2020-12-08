@@ -14,8 +14,8 @@ using std::ofstream;
 using utils::fileIO::ParticleDistribution;
 
 #define STRVEC vector<string>
-#define DBLVEC vector<float>
-#define DBL2DV vector<vector<float>>
+#define FLTVEC vector<float>
+#define FLT2DV vector<vector<float>>
 
 class Particles
 {
@@ -23,8 +23,8 @@ protected:
 	string name_m; //name of particle
 
 	STRVEC attributeNames_m;
-	DBL2DV origData_m; //initial data - not modified, but eventually saved to disk
-	DBL2DV currData_m; //current data - that which is being updated by iterating the sim
+	FLT2DV origData_m; //initial data - not modified, but eventually saved to disk
+	FLT2DV currData_m; //current data - that which is being updated by iterating the sim
 
 	bool initDataLoaded_m{ false };
 	bool initializedGPU_m{ false }; //consider what to do with this with multi GPU - still necessary?
@@ -55,8 +55,8 @@ public:
 	//Access functions
 	string        name()           const;
 	const STRVEC& attributeNames() const;
-	DBL2DV&       __data(bool orig);
-	const DBL2DV& data(bool orig) const;
+	FLT2DV&       __data(bool orig);
+	const FLT2DV& data(bool orig) const;
 	float         mass()          const;
 	float         charge()        const;
 	size_t        getNumberOfAttributes() const;
@@ -83,7 +83,7 @@ public:
 };
 
 #undef STRVEC
-#undef DBLVEC
-#undef DBL2DV
+#undef FLTVEC
+#undef FLT2DV
 
 #endif
