@@ -55,8 +55,8 @@ public:
 	bool	      upward() const;
 	FLT2DV&       __data();
 	const FLT2DV& data() const;
-	float**      get2DDataGPUPtr(int GPUind) const;
-	float*       get1DDataGPUPtr(int GPUind) const;
+	float**       get2DDataGPUPtr(int GPUind) const;
+	float*        get1DDataGPUPtr(int GPUind) const;
 	size_t        getNumberOfAttributes() const;
 	size_t        getNumberOfParticles()  const;
 

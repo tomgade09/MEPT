@@ -65,7 +65,7 @@ namespace utils
 		{
 			setDev(devNum);
 			
-			CUDA_API_ERRCHK(cudaMalloc((void**)&(*data1D_d), outerDim * innerDim * sizeof(float*)));
+			CUDA_API_ERRCHK(cudaMalloc((void**)&(*data1D_d), outerDim * innerDim * sizeof(float)));
 			CUDA_API_ERRCHK(cudaMalloc((void**)&(*data2D_d), outerDim * sizeof(float*)));
 			
 			CUDA_API_ERRCHK(cudaMemset(*data1D_d, 0, outerDim * innerDim * sizeof(float)));
@@ -91,6 +91,7 @@ namespace utils
 			{
 				LOOP_OVER_1D_ARRAY(data.size(), CUDA_API_ERRCHK(cudaMemcpy(data.at(iii).data(), (*data1D_d) + data.at(0).size() * iii, data.at(0).size() * sizeof(float), cudaMemcpyDeviceToHost)));
 			}
+			CUDA_KERNEL_ERRCHK_WSYNC();
 		}
 
 		void free2DArray(float** data1D_d, float*** data2D_d, size_t devNum)

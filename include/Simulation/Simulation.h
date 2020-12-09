@@ -78,7 +78,7 @@ protected:
 	//Protected functions
 	void createSatellite(TempSat* tmpsat, bool save = true);
 	void incTime();
-	void printSimAttributes(int numberOfIterations, int itersBtwCouts);
+	void printSimAttributes(size_t numberOfIterations, size_t itersBtwCouts);
 	void loadSimulation(string saveRootDir);
 	void loadDataFromDisk();
 

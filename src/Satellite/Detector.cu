@@ -11,10 +11,12 @@
 
 using std::invalid_argument;
 
-__global__ void satelliteDetector(float** data_d, float** capture_d, float simtime, float dt, float altitude, bool upward)
+__global__ void satelliteDetector(float** data_d, float** capture_d, float simtime, float dt, float altitude, bool upward, int len)
 {
-	unsigned int thdInd{ blockIdx.x * blockDim.x + threadIdx.x };
+	int thdInd{ blockIdx.x * blockDim.x + threadIdx.x };
 
+	if (thdInd >= len) return;
+	
 	float* detected_t_d{ capture_d[3] };    //do this first before creating a bunch of pointers
 
 	if (simtime == 0.0f) //not sure I fully like this, but it works
@@ -61,25 +63,15 @@ __global__ void satelliteDetector(float** data_d, float** capture_d, float simti
 
 void Satellite::iterateDetector(float simtime, float dt, int blockSize, int GPUind)
 {
-	if (numberOfParticles_m % blockSize != 0)
-		throw invalid_argument("Satellite::iterateDetector: numberOfParticles is not a whole multiple of blocksize, some particles will not be checked");
-
-	//a;
+	//if (numberOfParticles_m % blockSize != 0)  //no longer valid - they will be checked
+		//throw invalid_argument("Satellite::iterateDetector: numberOfParticles is not a whole multiple of blocksize, some particles will not be checked");
+	
 	//need to adjust pointers in the below kernel call to refer to specific GPU's memory spaces that are set up within each satellite
 	//refer to Particles for examples:
-	//In Particles.h:
-	//members:
-	//	size_t numGPUs_m;
-	//	vector<size_t> particleCountPerGPU_m;
-	//
-	//	constructor takes in number of GPUS and distribution of particles per GPU
-	//	
 	//In Particles.cpp
-	//	initializeGPU() - iterates over number of GPUs
-	//	copyDataToGPU() - uses offset and end to create a small subset vector of the total data and copy that to GPU
 	//	copyDataToHost() - uses offset and end to create a small empty vector that is passed in to copy data back to host
 	//	freeGPUMemory() - frees all devices' GPU mem regions
 	CUDA_API_ERRCHK(cudaSetDevice(GPUind));
-	satelliteDetector<<< numberOfParticles_m / blockSize, blockSize >>>(particleData2D_d.at(GPUind), satCaptrData2D_d.at(GPUind), simtime, dt, altitude_m, upwardFacing_m);
-	CUDA_KERNEL_ERRCHK_WSYNC();
+	satelliteDetector<<< particleCountPerGPU_m.at(GPUind) / blockSize, blockSize >>>(particleData2D_d.at(GPUind), satCaptrData2D_d.at(GPUind),
+		simtime, dt, altitude_m, upwardFacing_m, particleCountPerGPU_m.at(GPUind));
 }

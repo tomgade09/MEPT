@@ -59,7 +59,7 @@ Simulation::Simulation(float dt, float simMin, float simMax) :
 
 	saveRootDir_m = dataout.str();
 	Log_m = make_unique<Log>(saveRootDir_m + "simulation.log");
-
+	
 	// Setup GPU Information ( number of devices and compute capability of each device )
 	setupGPU();
 }
@@ -80,7 +80,7 @@ Simulation::~Simulation()
 }
 
 
-void Simulation::printSimAttributes(int numberOfIterations, int itersBtwCouts) //protected
+void Simulation::printSimAttributes(size_t numberOfIterations, size_t itersBtwCouts) //protected
 {
 	//Sim Header (folder) printed from Python - move here eventually
 	cout << "===============================================================" << "\n";
@@ -139,22 +139,22 @@ float Simulation::simMax() const
 //Class data
 int Simulation::getNumberOfParticleTypes() const
 {
-	return (int)particles_m.size();
+	return static_cast<int>(particles_m.size());
 }
 
 int Simulation::getNumberOfSatellites() const
 {
-	return (int)satPartPairs_m.size();
+	return static_cast<int>(satPartPairs_m.size());
 }
 
 int Simulation::getNumberOfParticles(int partInd) const
 {
-	return (int)particles_m.at(partInd)->getNumberOfParticles();
+	return static_cast<int>(particles_m.at(partInd)->getNumberOfParticles());
 }
 
 int Simulation::getNumberOfAttributes(int partInd) const
 {
-	return (int)particles_m.at(partInd)->getNumberOfAttributes();
+	return static_cast<int>(particles_m.at(partInd)->getNumberOfAttributes());
 }
 
 string Simulation::getParticlesName(int partInd) const
@@ -169,7 +169,7 @@ string Simulation::getSatelliteName(int satInd) const
 
 int Simulation::getParticleIndexOfSat(int satInd) const
 {
-	return tempSats_m.at(satInd)->particleInd;
+	return static_cast<int>(tempSats_m.at(satInd)->particleInd);
 }
 
 
@@ -291,7 +291,7 @@ void Simulation::createTempSat(string partName, float altitude, bool upwardFacin
 {
 	for (size_t partInd = 0; partInd < particles_m.size(); partInd++)
 	{
-		if (particles((int)partInd)->name() == partName)
+		if (particles(static_cast<int>(partInd))->name() == partName)
 		{
 			createTempSat(partInd, altitude, upwardFacing, name);
 			return;
@@ -461,7 +461,7 @@ void Simulation::saveDataToDisk()
 		throw logic_error("Simulation::saveDataToDisk: simulation not initialized with initializeSimulation()");
 	if (!saveReady_m)
 		throw logic_error("Simulation::saveDataToDisk: simulation not iterated and/or copied to host with iterateSmiulation()");
-
+	
 	LOOP_OVER_1D_ARRAY(getNumberOfParticleTypes(), particles_m.at(iii)->saveDataToDisk(saveRootDir_m + "/bins/particles_init/", true));
 	LOOP_OVER_1D_ARRAY(getNumberOfParticleTypes(), particles_m.at(iii)->saveDataToDisk(saveRootDir_m + "/bins/particles_final/", false));
 	LOOP_OVER_1D_ARRAY(getNumberOfSatellites(), satellite(iii)->saveDataToDisk(saveRootDir_m + "/bins/satellites/"));

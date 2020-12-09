@@ -61,7 +61,11 @@ void Satellite::initializeGPU()
 	{
 		satCaptrData1D_d.push_back(nullptr);
 		satCaptrData2D_d.push_back(nullptr);
-		utils::GPU::setup2DArray(&satCaptrData1D_d.at(dev), &satCaptrData2D_d.at(dev), attributeNames_m.size(), numberOfParticles_m, dev);
+		utils::GPU::setup2DArray(&satCaptrData1D_d.at(dev), &satCaptrData2D_d.at(dev),
+			attributeNames_m.size(), particleCountPerGPU_m.at(dev), dev);
+
+		cerr << "::DEBUG(not error):: Satellite::initializeGPU() : setup2DArray GPU num " + to_string(dev) +
+			    ": length " + to_string(particleCountPerGPU_m.at(dev));
 	}
 	initializedGPU_m = true;
 }
@@ -88,21 +92,23 @@ void Satellite::copyDataToHost()
 	for (int dev = 0; dev < numGPUs_m; ++dev)
 	{
 		// Copy data in data_m arrays
-		utils::GPU::copy2DArray(data_GPU_m.at(dev), &satCaptrData1D_d.at(dev), false);
-
-		// Copy data into data_m
-		//data_m.reserve(data_m.size() + data.size());
-		//data_m.insert(data_m.end(), data.begin(), data.end());// std::make_move_iterator(data.begin()), std::make_move_iterator(data.end()));
-		//data.clear();
+		utils::GPU::copy2DArray(data_GPU_m.at(dev), &satCaptrData1D_d.at(dev), false, dev);
 	}
 	data_m = data_GPU_m.at(0);
 	for (int dev = 1; dev < numGPUs_m; ++dev)
 	{
-		
-		// Copy data_m arrays into data_m array
-		data_m.reserve(data_m.size() + data_GPU_m.at(dev).size());
-		data_m.insert(data_m.end(), data_GPU_m.at(dev).begin(), data_GPU_m.at(dev).end());// std::make_move_iterator(data.begin()), std::make_move_iterator(data.end()));
+		for (int attr = 0; attr < attributeNames_m.size(); attr++)
+		{
+			// Copy data_m arrays into data_m array
+			data_m.at(attr).reserve(data_m.at(attr).size() + data_GPU_m.at(dev).at(attr).size());
+			data_m.at(attr).insert(data_m.at(attr).end(), data_GPU_m.at(dev).at(attr).begin(),
+				data_GPU_m.at(dev).at(attr).end());
+		}
 	}
+
+	for (size_t idx = 0; idx < data_m.at(4).size(); idx++)
+		if (data_m.at(4).at(idx) > -0.5f)
+			data_m.at(4).at(idx) = static_cast<float>(idx);
 }
 
 void Satellite::freeGPUMemory()
@@ -111,7 +117,7 @@ void Satellite::freeGPUMemory()
 
 	for (int dev = 0; dev < numGPUs_m; ++dev)
 	{
-		utils::GPU::free2DArray(&satCaptrData1D_d.at(dev), &satCaptrData2D_d.at(dev));
+		utils::GPU::free2DArray(&satCaptrData1D_d.at(dev), &satCaptrData2D_d.at(dev), dev);
 	}
 
 	particleData2D_d.clear();
@@ -141,7 +147,7 @@ vector<vector<float>> Satellite::removeZerosData()
 void Satellite::saveDataToDisk(string folder) //move B and mass to getConsolidatedData and have it convert back (or in gpu?)
 {
 	vector<vector<float>> results{ removeZerosData() };
-
+	
 	for (size_t attr = 0; attr < results.size(); attr++)
 		writeFltBin(results.at(attr), folder + name_m + "_" + attributeNames_m.at(attr) + ".bin", results.at(attr).size());
 }
