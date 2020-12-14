@@ -62,9 +62,14 @@ protected:
 	bool saveReady_m{ false };
 	bool previousSim_m{ false };
 
+	//GPU Data
+	size_t gpuCount_m{ 0 };
+	vector<float> computeSplit_m;
+	//vector<size_t> grid_m;
+
 	//Simulation-specific classes tracked by Simulation
-	unique_ptr<BModel>             BFieldModel_m;
-	unique_ptr<EField>             EFieldModel_m;
+	vector<unique_ptr<BModel>>     BFieldModel_m;
+	vector<unique_ptr<EField>>     EFieldModel_m;
 	unique_ptr<Log>                Log_m;
 	vector<shared_ptr<Particles>>  particles_m;
 	vector<unique_ptr<TempSat>>    tempSats_m; //holds data until the GPU data arrays are allocated, allows the user more flexibility of when to call createSatellitesAPI
@@ -73,9 +78,12 @@ protected:
 	//Protected functions
 	void createSatellite(TempSat* tmpsat, bool save = true);
 	void incTime();
-	void printSimAttributes(int numberOfIterations, int itersBtwCouts, string GPUName);
+	void printSimAttributes(size_t numberOfIterations, size_t itersBtwCouts);
 	void loadSimulation(string saveRootDir);
 	void loadDataFromDisk();
+
+	void setupGPU();
+	vector<size_t> getSplitSize(size_t numOfParticles);
 
 public:
 	Simulation(float dt, float simMin, float simMax);
@@ -110,8 +118,8 @@ public:
 	Particles* particles(Satellite* satellite) const;
 	Satellite* satellite(int satInd)  const;
 	Satellite* satellite(string name) const; //search for name, return satellite
-	BModel*    Bmodel()               const;
-	EField*    Efield()               const;
+	BModel*    Bmodel(size_t dev=0)   const;
+	EField*    Efield(size_t dev=0)   const;
 	Log*	   getLog();
 
 	//Simulation data

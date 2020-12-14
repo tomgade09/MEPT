@@ -18,19 +18,32 @@ using std::logic_error;
 using std::runtime_error;
 using std::invalid_argument;
 
-using utils::fileIO::readDblBin;
-using utils::fileIO::writeDblBin;
+using utils::fileIO::readFltBin;
+using utils::fileIO::writeFltBin;
 using namespace utils::fileIO::serialize;
 
-Satellite::Satellite(string name, vector<string> attributeNames, meters altitude, bool upwardFacing, size_t numberOfParticles, float** partDataGPUPtr) :
-	name_m{ name }, attributeNames_m{ attributeNames }, altitude_m{ altitude }, upwardFacing_m{ upwardFacing }, numberOfParticles_m{ numberOfParticles }, particleData2D_d{ partDataGPUPtr }
+Satellite::Satellite(string name, vector<string> attributeNames, meters altitude, bool upwardFacing, size_t numberOfParticles, const std::shared_ptr<Particles> &particle, size_t numGPUs, vector<size_t> particleCountPerGPU) :
+	name_m{ name }, attributeNames_m{ attributeNames }, altitude_m{ altitude }, upwardFacing_m{ upwardFacing }, numberOfParticles_m{ numberOfParticles }, numGPUs_m{ numGPUs }, particleCountPerGPU_m{particleCountPerGPU}
 {
+	data_GPU_m.clear();
+	for (int dev = 0; dev < numGPUs; ++dev)
+	{
+		particleData2D_d.push_back(particle->getCurrDataGPUPtr(dev));
+		data_GPU_m.push_back( vector<vector<float>>(attributeNames_m.size(), vector<float>(particleCountPerGPU.at(dev))));
+	}
 	data_m = vector<vector<float>>(attributeNames_m.size(), vector<float>(numberOfParticles_m));
 	initializeGPU();
 }
 
-Satellite::Satellite(ifstream& in, float** particleData2D) : particleData2D_d{ particleData2D }
+Satellite::Satellite(ifstream& in, const std::shared_ptr<Particles> &particle, size_t numGPUs, vector<size_t> particleCountPerGPU) 
+	: numGPUs_m {numGPUs}, particleCountPerGPU_m{particleCountPerGPU}
 {
+	data_GPU_m.clear();
+	for (int dev = 0; dev < numGPUs; ++dev)
+	{
+		particleData2D_d.push_back(particle->getCurrDataGPUPtr(dev));
+		data_GPU_m.push_back(vector<vector<float>>(attributeNames_m.size(), vector<float>(particleCountPerGPU.at(dev))));
+	}
 	deserialize(in);
 
 	data_m = vector<vector<float>>(attributeNames_m.size(), vector<float>(numberOfParticles_m));
@@ -44,7 +57,16 @@ Satellite::~Satellite()
 
 void Satellite::initializeGPU()
 {
-	utils::GPU::setup2DArray(&satCaptrData1D_d, &satCaptrData2D_d, attributeNames_m.size(), numberOfParticles_m);
+	for (int dev = 0; dev < numGPUs_m; ++dev)
+	{
+		satCaptrData1D_d.push_back(nullptr);
+		satCaptrData2D_d.push_back(nullptr);
+		utils::GPU::setup2DArray(&satCaptrData1D_d.at(dev), &satCaptrData2D_d.at(dev),
+			attributeNames_m.size(), particleCountPerGPU_m.at(dev), dev);
+
+		cerr << "::DEBUG(not error):: Satellite::initializeGPU() : setup2DArray GPU num " + to_string(dev) +
+			    ": length " + to_string(particleCountPerGPU_m.at(dev));
+	}
 	initializedGPU_m = true;
 }
 
@@ -64,17 +86,41 @@ size_t Satellite::getAttrIndByName(string name)
 
 void Satellite::copyDataToHost()
 {// data_m array: [v_para, mu, s, time, partindex][particle number]
+	//vector<vector<float>>  data; //[attribute][particle]
+	//data_m.clear();
 
-	utils::GPU::copy2DArray(data_m, &satCaptrData1D_d, false);
+	for (int dev = 0; dev < numGPUs_m; ++dev)
+	{
+		// Copy data in data_m arrays
+		utils::GPU::copy2DArray(data_GPU_m.at(dev), &satCaptrData1D_d.at(dev), false, dev);
+	}
+	data_m = data_GPU_m.at(0);
+	for (int dev = 1; dev < numGPUs_m; ++dev)
+	{
+		for (int attr = 0; attr < attributeNames_m.size(); attr++)
+		{
+			// Copy data_m arrays into data_m array
+			data_m.at(attr).reserve(data_m.at(attr).size() + data_GPU_m.at(dev).at(attr).size());
+			data_m.at(attr).insert(data_m.at(attr).end(), data_GPU_m.at(dev).at(attr).begin(),
+				data_GPU_m.at(dev).at(attr).end());
+		}
+	}
+
+	for (size_t idx = 0; idx < data_m.at(4).size(); idx++)
+		if (data_m.at(4).at(idx) > -0.5f)
+			data_m.at(4).at(idx) = static_cast<float>(idx);
 }
 
 void Satellite::freeGPUMemory()
 {
 	if (!initializedGPU_m) { return; }
 
-	utils::GPU::free2DArray(&satCaptrData1D_d, &satCaptrData2D_d);
+	for (int dev = 0; dev < numGPUs_m; ++dev)
+	{
+		utils::GPU::free2DArray(&satCaptrData1D_d.at(dev), &satCaptrData2D_d.at(dev), dev);
+	}
 
-	particleData2D_d = nullptr;
+	particleData2D_d.clear();
 	initializedGPU_m = false;
 }
 
@@ -101,17 +147,17 @@ vector<vector<float>> Satellite::removeZerosData()
 void Satellite::saveDataToDisk(string folder) //move B and mass to getConsolidatedData and have it convert back (or in gpu?)
 {
 	vector<vector<float>> results{ removeZerosData() };
-
+	
 	for (size_t attr = 0; attr < results.size(); attr++)
-		writeDblBin(results.at(attr), folder + name_m + "_" + attributeNames_m.at(attr) + ".bin", results.at(attr).size());
+		writeFltBin(results.at(attr), folder + name_m + "_" + attributeNames_m.at(attr) + ".bin", results.at(attr).size());
 }
 
 void Satellite::loadDataFromDisk(string folder)
 {
-	data_m = vector<vector<float>>(attributeNames_m.size()); //this is done so readDblBin doesn't assume how many particles it's reading
+	data_m = vector<vector<float>>(attributeNames_m.size()); //this is done so readFltBin doesn't assume how many particles it's reading
 
 	for (size_t attr = 0; attr < attributeNames_m.size(); attr++)
-		readDblBin(data_m.at(attr), folder + name_m + "_" + attributeNames_m.at(attr) + ".bin");
+		readFltBin(data_m.at(attr), folder + name_m + "_" + attributeNames_m.at(attr) + ".bin");
 
 	bool expand{ false };
 	if (data_m.at(0).size() == static_cast<size_t>(numberOfParticles_m))
@@ -185,14 +231,14 @@ const vector<vector<float>>& Satellite::data() const
 	return data_m;
 }
 
-float** Satellite::get2DDataGPUPtr() const
+float** Satellite::get2DDataGPUPtr(int GPUind) const
 {
-	return satCaptrData2D_d;
+	return satCaptrData2D_d.at(GPUind);
 }
 
-float* Satellite::get1DDataGPUPtr() const
+float* Satellite::get1DDataGPUPtr(int GPUind) const
 {
-	return satCaptrData1D_d;
+	return satCaptrData1D_d.at(GPUind);
 }
 
 size_t Satellite::getNumberOfAttributes() const

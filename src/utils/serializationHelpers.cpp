@@ -57,7 +57,7 @@ namespace utils
 			
 			stringbuf serializeFloatVector(const vector<float>& vec)
 			{
-				std:vector<double> doubleVec(vec.begin(), vec.end());
+				vector<double> doubleVec(vec.begin(), vec.end());
 				return serializeDoubleVector(doubleVec);
 			}
 

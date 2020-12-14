@@ -47,7 +47,6 @@
     <ClInclude Include="..\include\Particles\Particles.h" />
     <ClInclude Include="..\include\physicalconstants.h" />
     <ClInclude Include="..\include\Satellite\Satellite.h" />
-    <ClInclude Include="..\include\Simulation\Environment.h" />
     <ClInclude Include="..\include\Simulation\Simulation.h" />
     <ClInclude Include="..\include\utils\arrayUtilsGPU.h" />
     <ClInclude Include="..\include\utils\fileIO.h" />
@@ -69,7 +68,6 @@
     <CudaCompile Include="..\src\EField\EField.cu" />
     <CudaCompile Include="..\src\EField\QSPS.cu" />
     <CudaCompile Include="..\src\Satellite\Detector.cu" />
-    <CudaCompile Include="..\src\Simulation\Environment.cu" />
     <CudaCompile Include="..\src\Simulation\simulationphysics.cu" />
     <CudaCompile Include="..\src\utils\arrayUtilsGPU.cu" />
   </ItemGroup>

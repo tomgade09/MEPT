@@ -16,9 +16,6 @@
     <CudaCompile Include="..\src\Simulation\simulationphysics.cu">
       <Filter>Source Files\Simulation</Filter>
     </CudaCompile>
-    <CudaCompile Include="..\src\Simulation\Environment.cu">
-      <Filter>Source Files\Simulation</Filter>
-    </CudaCompile>
     <CudaCompile Include="..\src\utils\arrayUtilsGPU.cu">
       <Filter>Source Files\utils</Filter>
     </CudaCompile>
@@ -148,9 +145,6 @@
     </ClInclude>
     <ClInclude Include="..\include\utils\loopmacros.h">
       <Filter>Header Files\utils\macros</Filter>
-    </ClInclude>
-    <ClInclude Include="..\include\Simulation\Environment.h">
-      <Filter>Header Files\Simulation</Filter>
     </ClInclude>
     <ClInclude Include="..\include\utils\serializationHelpers.h">
       <Filter>Header Files\utils\IO</Filter>

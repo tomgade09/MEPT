@@ -57,7 +57,7 @@ namespace utils
 			return ret;
 		}
 
-		DLLEXP vector<float> strToDblVec(string str, const char delim) //delim defaults to ','
+		DLLEXP vector<float> strToFltVec(string str, const char delim) //delim defaults to ','
 		{
 			vector<string> strVec{ strToStrVec(str, delim) };
 			vector<float> ret;

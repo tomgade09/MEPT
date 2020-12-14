@@ -4,6 +4,7 @@
 #include <filesystem>
 
 #include "utils/loopmacros.h"
+#include "utils/arrayUtilsGPU.h"
 #include "utils/serializationHelpers.h"
 #include "ErrorHandling/simExceptionMacros.h"
 
@@ -34,8 +35,6 @@ Simulation::Simulation(float dt, float simMin, float simMax) :
 	stringstream dataout;
 	auto in_time_t = system_clock::to_time_t(system_clock::now());
 	dataout << "../_dataout/" << put_time(localtime(&in_time_t), "%C%m%d_%H.%M.%S/");
-	cout << "===============================================================" << "\n";
-	cout << "Data Folder:    " << dataout.str() << "\n";
 
 	path datadir{ dataout.str() };
 	if (!exists(datadir))
@@ -60,6 +59,9 @@ Simulation::Simulation(float dt, float simMin, float simMax) :
 
 	saveRootDir_m = dataout.str();
 	Log_m = make_unique<Log>(saveRootDir_m + "simulation.log");
+	
+	// Setup GPU Information ( number of devices and compute capability of each device )
+	setupGPU();
 }
 
 Simulation::Simulation(string saveRootDir) : saveRootDir_m{ saveRootDir + "/" },
@@ -67,25 +69,27 @@ Simulation::Simulation(string saveRootDir) : saveRootDir_m{ saveRootDir + "/" },
 {
 	SIM_API_EXCEP_CHECK(loadSimulation(saveRootDir_m));
 	loadDataFromDisk();
+	setupGPU();
 }
 
 Simulation::~Simulation()
 {
 	SIM_API_EXCEP_CHECK(if (!previousSim_m) saveSimulation());
 	if (!previousSim_m && saveReady_m) saveDataToDisk(); //save data if it hasn't been done
-	else if (!previousSim_m) cerr << "Warning: Simulation::~Simulation: saveReady_m is false.";
 	Log_m->createEntry("End simulation");
 }
 
 
-void Simulation::printSimAttributes(int numberOfIterations, int itersBtwCouts, string GPUName) //protected
+void Simulation::printSimAttributes(size_t numberOfIterations, size_t itersBtwCouts) //protected
 {
 	//Sim Header (folder) printed from Python - move here eventually
-	cout << "GPU Name:       " << GPUName << endl;
+	cout << "===============================================================" << "\n";
+	cout << "Data Folder:    " << saveRootDir_m << "\n";
+	cout << "GPU(s) In Use:  " << utils::GPU::getDeviceNames() << endl;
 	cout << "Sim between:    " << simMin_m << "m - " << simMax_m << "m" << endl;
 	cout << "dt:             " << dt_m << "s" << endl;
-	cout << "BModel Model:   " << BFieldModel_m->name() << endl;
-	cout << "EField Elems:   " << ((Efield()->qspsCount() > 0) ? "QSPS: " + to_string(Efield()->qspsCount()) : "") << endl;
+	cout << "BModel Model:   " << BFieldModel_m.at(0)->name() << endl;
+	cout << "EField Elems:   " << ((Efield()->qspsCount() > 0) ? "QSPS" : "") << endl;
 	cout << "Particles:      ";
 	for (size_t iii = 0; iii < particles_m.size(); iii++)
 	{
@@ -135,22 +139,22 @@ float Simulation::simMax() const
 //Class data
 int Simulation::getNumberOfParticleTypes() const
 {
-	return (int)particles_m.size();
+	return static_cast<int>(particles_m.size());
 }
 
 int Simulation::getNumberOfSatellites() const
 {
-	return (int)satPartPairs_m.size();
+	return static_cast<int>(satPartPairs_m.size());
 }
 
 int Simulation::getNumberOfParticles(int partInd) const
 {
-	return (int)particles_m.at(partInd)->getNumberOfParticles();
+	return static_cast<int>(particles_m.at(partInd)->getNumberOfParticles());
 }
 
 int Simulation::getNumberOfAttributes(int partInd) const
 {
-	return (int)particles_m.at(partInd)->getNumberOfAttributes();
+	return static_cast<int>(particles_m.at(partInd)->getNumberOfAttributes());
 }
 
 string Simulation::getParticlesName(int partInd) const
@@ -165,7 +169,7 @@ string Simulation::getSatelliteName(int satInd) const
 
 int Simulation::getParticleIndexOfSat(int satInd) const
 {
-	return tempSats_m.at(satInd)->particleInd;
+	return static_cast<int>(tempSats_m.at(satInd)->particleInd);
 }
 
 
@@ -204,14 +208,14 @@ Satellite* Simulation::satellite(string name) const
 	throw invalid_argument("Simulation::satellite: no satellite of name " + name);
 }
 
-BModel* Simulation::Bmodel() const
+BModel* Simulation::Bmodel(size_t dev) const
 {
-	return BFieldModel_m.get();
+	return BFieldModel_m.at(dev).get();
 }
 
-EField* Simulation::Efield() const
+EField* Simulation::Efield(size_t dev) const
 {
-	return EFieldModel_m.get();
+	return EFieldModel_m.at(dev).get();
 }
 
 Log* Simulation::getLog()
@@ -238,12 +242,12 @@ const vector<vector<float>>& Simulation::getSatelliteData(size_t satInd)
 //Fields data
 float Simulation::getBFieldAtS(float s, float time) const
 {
-	return BFieldModel_m->getBFieldAtS(s, time);
+	return BFieldModel_m.at(0)->getBFieldAtS(s, time);
 }
 
 float Simulation::getEFieldAtS(float s, float time) const
 {
-	return EFieldModel_m->getEFieldAtS(s, time);
+	return EFieldModel_m.at(0)->getEFieldAtS(s, time);
 }
 
 
@@ -272,7 +276,9 @@ void Simulation::createParticlesType(string name, float mass, float charge, size
 		namesCopy.push_back(loadFilesDir);
 	}
 
-	shared_ptr<Particles> newPart{ make_unique<Particles>(name, attrNames, mass, charge, numParts) };
+	size_t devcnt{ utils::GPU::getDeviceCount() };
+	vector<size_t> pcntPerGPU{ getSplitSize(numParts) };
+	shared_ptr<Particles> newPart{ make_unique<Particles>(name, attrNames, mass, charge, numParts, devcnt, pcntPerGPU) };
 
 	if (loadFilesDir != "")
 		newPart->loadDataFromDisk(loadFilesDir);
@@ -285,7 +291,7 @@ void Simulation::createTempSat(string partName, float altitude, bool upwardFacin
 {
 	for (size_t partInd = 0; partInd < particles_m.size(); partInd++)
 	{
-		if (particles((int)partInd)->name() == partName)
+		if (particles(static_cast<int>(partInd))->name() == partName)
 		{
 			createTempSat(partInd, altitude, upwardFacing, name);
 			return;
@@ -310,10 +316,13 @@ void Simulation::createSatellite(TempSat* tmpsat, bool save) //protected
 	float altitude{ tmpsat->altitude };
 	bool upwardFacing{ tmpsat->upwardFacing };
 	string name{ tmpsat->name };
-
+	size_t dev = 0;
+	// create satelite on all the devices
+	// Satelite array indexed as Sat 1 dev 0-n, Sat 2 dev 0-n, ...
+	
 	if (particles_m.size() <= partInd)
 		throw out_of_range("createSatellite: no particle at the specifed index " + to_string(partInd));
-	if (particles_m.at(partInd)->getCurrDataGPUPtr() == nullptr)
+	if (particles_m.at(partInd)->getCurrDataGPUPtr(dev) == nullptr)
 		throw runtime_error("createSatellite: pointer to GPU data is a nullptr of particle " + particles_m.at(partInd)->name() + " - that's just asking for trouble");
 
 	Log_m->createEntry("Created Satellite: " + name + ", Particles tracked: " + particles_m.at(partInd)->name()
@@ -321,63 +330,87 @@ void Simulation::createSatellite(TempSat* tmpsat, bool save) //protected
 
 	vector<string> attrNames{ "vpara", "vperp", "s", "time", "index" };
 	shared_ptr<Particles> part{ particles_m.at(partInd) };
-	unique_ptr<Satellite> sat{ make_unique<Satellite>(name, attrNames, altitude, upwardFacing, part->getNumberOfParticles(), part->getCurrDataGPUPtr()) };
+	unique_ptr<Satellite> sat{ make_unique<Satellite>(name, attrNames, altitude, upwardFacing, part->getNumberOfParticles(), part, gpuCount_m, part->getNumParticlesPerGPU()) };
 	satPartPairs_m.push_back(make_unique<SatandPart>(move(sat), move(part)));
 }
 
 void Simulation::setBFieldModel(string name, vector<float> args, bool save)
 {//add log file messages
-	if (BFieldModel_m)
-		throw invalid_argument("Simulation::setBFieldModel: trying to assign B Field Model when one is already assigned - existing: " + BFieldModel_m->name() + ", attempted: " + name);
+	if (BFieldModel_m.size() != 0)
+		throw invalid_argument("Simulation::setBFieldModel: trying to assign B Field Model when one is already assigned - existing: " + BFieldModel_m.at(0)->name() + ", attempted: " + name);
 	if (args.empty())
 		throw invalid_argument("Simulation::setBFieldModel: no arguments passed in");
-	
 	vector<string> attrNames;
-
-	if (name == "DipoleB")
+	
+	// Multi GPU will run this for each device. If compiled for cpu this will still run a single time.
+	size_t dev = 0;
+	do /* while (dev < gpuCount_m) */
 	{
-		if (args.size() == 1)
-		{ //for defaults in constructor of DipoleB
-			BFieldModel_m = make_unique<DipoleB>(args.at(0));
-			args.push_back(((DipoleB*)BFieldModel_m.get())->getErrTol());
-			args.push_back(((DipoleB*)BFieldModel_m.get())->getds());
+		utils::GPU::setDev(dev);
+
+		if (name == "DipoleB")
+		{
+			if (args.size() == 1)
+			{ //for defaults in constructor of DipoleB
+				BFieldModel_m.push_back( make_unique<DipoleB>(args.at(0)) );
+				args.push_back(dynamic_cast<DipoleB*>(BFieldModel_m.at(dev).get())->getErrTol());
+				args.push_back(dynamic_cast<DipoleB*>(BFieldModel_m.at(dev).get())->getds());
+			}
+			else if (args.size() == 3)
+				BFieldModel_m.push_back( make_unique<DipoleB>(args.at(0), args.at(1), args.at(2)) );
+			else
+				throw invalid_argument("setBFieldModel: wrong number of arguments specified for DipoleB: " + to_string(args.size()));
+
+			attrNames = { "ILAT", "ds", "errTol" };
 		}
-		else if (args.size() == 3)
-			BFieldModel_m = make_unique<DipoleB>(args.at(0), args.at(1), args.at(2));
-		else
-			throw invalid_argument("setBFieldModel: wrong number of arguments specified for DipoleB: " + to_string(args.size()));
+		else if (name == "DipoleBLUT")
+		{
+			if (args.size() == 3)
+				BFieldModel_m.push_back( make_unique<DipoleBLUT>(args.at(0), simMin_m, simMax_m, args.at(1), (int)args.at(2)) );
+			else
+				throw invalid_argument("setBFieldModel: wrong number of arguments specified for DipoleBLUT: " + to_string(args.size()));
 
-		attrNames = { "ILAT", "ds", "errTol" };
-	}
-	else if (name == "DipoleBLUT")
-	{
-		if (args.size() == 3)
-			BFieldModel_m = make_unique<DipoleBLUT>(args.at(0), simMin_m, simMax_m, args.at(1), (int)args.at(2));
+			attrNames = { "ILAT", "ds", "numMsmts" };
+		}
 		else
-			throw invalid_argument("setBFieldModel: wrong number of arguments specified for DipoleBLUT: " + to_string(args.size()));
-
-		attrNames = { "ILAT", "ds", "numMsmts" };
-	}
-	else
-	{
-		cout << "Not sure what model is being referenced.  Using DipoleB instead of " << name << endl;
-		BFieldModel_m = make_unique<DipoleB>(args.at(0));
-		args.resize(3);
-		args.at(1) = ((DipoleB*)BFieldModel_m.get())->getErrTol();
-		args.at(1) = ((DipoleB*)BFieldModel_m.get())->getds();
-		attrNames = { "ILAT", "ds", "errTol" };
-	}
+		{
+			cout << "Not sure what model is being referenced.  Using DipoleB instead of " << name << endl;
+			BFieldModel_m.push_back( make_unique<DipoleB>(args.at(0)) );
+			args.resize(3);
+			args.at(1) = dynamic_cast<DipoleB*>(BFieldModel_m.at(dev).get())->getErrTol();
+			args.at(2) = dynamic_cast<DipoleB*>(BFieldModel_m.at(dev).get())->getds();
+			attrNames = { "ILAT", "ds", "errTol" };
+		}
+		dev++;
+	} while (dev < gpuCount_m);
 }
 
 void Simulation::setBFieldModel(unique_ptr<BModel> BModelptr)
 {
-	BFieldModel_m = std::move(BModelptr);
+	//Assume set for all devices
+	BFieldModel_m.clear(); //Empty vector array if already allocated
+	size_t dev = 0;
+	do
+	{
+		utils::GPU::setDev(dev);
+		BFieldModel_m.push_back(std::move(BModelptr));
+		dev++;
+	} while (dev < gpuCount_m);
 }
 
 void Simulation::addEFieldModel(string name, vector<float> args, bool save)
 {
-	if (EFieldModel_m == nullptr)
-		EFieldModel_m = make_unique<EField>();
+	if (EFieldModel_m.size() == 0)
+	{
+		size_t dev = 0;
+		do
+		{
+			utils::GPU::setDev(dev);
+
+			EFieldModel_m.push_back( make_unique<EField>() );
+			dev++;
+		} while (dev < gpuCount_m);
+	}
 	
 	vector<string> attrNames;
 
@@ -399,7 +432,13 @@ void Simulation::addEFieldModel(string name, vector<float> args, bool save)
 			attrNames.push_back("magnitude");
 		}
 		cout << "QSPS temporary fix - instantiates with [vector].at(0)\n";
-		EFieldModel_m->add(make_unique<QSPS>(altMin.at(0), altMax.at(0), mag.at(0)));
+		size_t dev = 0;
+		do
+		{
+			utils::GPU::setDev(dev);
+			EFieldModel_m.at(dev)->add(make_unique<QSPS>(altMin.at(0), altMax.at(0), mag.at(0)));
+			dev++;
+		} while (dev < gpuCount_m);
 		Log_m->createEntry("Added QSPS");
 	}
 	else if (name == "AlfvenLUT")
@@ -422,7 +461,7 @@ void Simulation::saveDataToDisk()
 		throw logic_error("Simulation::saveDataToDisk: simulation not initialized with initializeSimulation()");
 	if (!saveReady_m)
 		throw logic_error("Simulation::saveDataToDisk: simulation not iterated and/or copied to host with iterateSmiulation()");
-
+	
 	LOOP_OVER_1D_ARRAY(getNumberOfParticleTypes(), particles_m.at(iii)->saveDataToDisk(saveRootDir_m + "/bins/particles_init/", true));
 	LOOP_OVER_1D_ARRAY(getNumberOfParticleTypes(), particles_m.at(iii)->saveDataToDisk(saveRootDir_m + "/bins/particles_final/", false));
 	LOOP_OVER_1D_ARRAY(getNumberOfSatellites(), satellite(iii)->saveDataToDisk(saveRootDir_m + "/bins/satellites/"));
@@ -449,8 +488,14 @@ void Simulation::resetSimulation(bool fields)
 
 	if (fields)
 	{
-		BFieldModel_m.reset();
-		EFieldModel_m.reset();
+		size_t dev = 0;
+		do
+		{
+			utils::GPU::setDev(dev);
+			BFieldModel_m.at(dev).reset();
+			EFieldModel_m.at(dev).reset();
+			dev++;
+		} while (dev < gpuCount_m);
 	}
 }
 
@@ -481,14 +526,14 @@ void Simulation::saveSimulation() const
 	//Write BField
 	Component comp{ Component::BField };
 	out.write(reinterpret_cast<const char*>(&comp), sizeof(Component));
-	BModel::Type type{ BFieldModel_m->type() };
+	BModel::Type type{ BFieldModel_m.at(0)->type() };
 	out.write(reinterpret_cast<const char*>(&type), sizeof(BModel::Type));
-	BFieldModel_m->serialize(out);
+	BFieldModel_m.at(0)->serialize(out);
 
 	//Write EField
 	comp = Component::EField;
 	out.write(reinterpret_cast<const char*>(&comp), sizeof(Component));
-	EFieldModel_m->serialize(out);
+	EFieldModel_m.at(0)->serialize(out);
 
 	//Write Log
 	//comp = Component::Log;
@@ -540,16 +585,28 @@ void Simulation::loadSimulation(string saveRootDir)
 		{
 			BModel::Type type{ BModel::Type::Other };
 			in.read(reinterpret_cast<char*>(&type), sizeof(BModel::Type));
-			
-			if (type == BModel::Type::DipoleB)
-				BFieldModel_m = make_unique<DipoleB>(in);
-			else if (type == BModel::Type::DipoleBLUT)
-				BFieldModel_m = make_unique<DipoleBLUT>(in);
-			else throw std::runtime_error("Simulation::load: BModel type not recognized");
+			size_t dev = 0;
+			do
+			{
+				utils::GPU::setDev(dev);
+
+				if (type == BModel::Type::DipoleB)
+					BFieldModel_m.push_back( make_unique<DipoleB>(in) );
+				else if (type == BModel::Type::DipoleBLUT)
+					BFieldModel_m.push_back(make_unique<DipoleBLUT>(in));
+				else throw std::runtime_error("Simulation::load: BModel type not recognized");
+				dev++;
+			} while (dev < gpuCount_m);
 		}
 		else if (comp == Component::EField)
 		{
-			EFieldModel_m = make_unique<EField>(in);
+			size_t dev = 0;
+			do
+			{
+				utils::GPU::setDev(dev);
+				dev++;
+				EFieldModel_m.push_back( make_unique<EField>(in));
+			} while (dev < gpuCount_m);
 		}
 		//else if (comp == Component::Log)
 		//{
@@ -567,7 +624,7 @@ void Simulation::loadSimulation(string saveRootDir)
 
 			satPartPairs_m.push_back(
 				make_unique<SatandPart>(
-					make_unique<Satellite>(in, particles_m.at(part)->getCurrDataGPUPtr()),
+					make_unique<Satellite>(in, particles_m.at(part), gpuCount_m, particles_m.at(part)->getNumParticlesPerGPU()),
 					move(particles)));
 		}
 		else throw std::runtime_error("Simulation::load: Simulation Component not recognized");
