@@ -45,7 +45,7 @@ protected:
 	void deserialize(ifstream& in);
 
 public:
-	Particles::Particles(string name, vector<string> attributeNames, float mass, float charge, size_t numParts,
+	Particles(string name, vector<string> attributeNames, float mass, float charge, size_t numParts,
 		size_t numGPUs, vector<size_t> particleCountPerGPU);
 	Particles(ifstream& in);
 	~Particles();
