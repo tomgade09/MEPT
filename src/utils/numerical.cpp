@@ -31,7 +31,7 @@ namespace utils
 				{
 					//const float test = mass * ( ( vpara.at(part) * vpara.at(part) ) + ( vperp.at(part) * vperp.at(part) ) ) / (float)JOULE_PER_EV;
 					energies.at(part) = (0.5f * mass * (vpara.at(part) * vpara.at(part) + vperp.at(part) * vperp.at(part)) / (float)JOULE_PER_EV);
-					pitches.at(part) = std::atan2f(std::abs(vperp.at(part)), -vpara.at(part)) / (float)RADS_PER_DEG;
+					pitches.at(part) = std::atan2(std::abs(vperp.at(part)), -vpara.at(part)) / (float)RADS_PER_DEG;
 				}
 			}
 		}

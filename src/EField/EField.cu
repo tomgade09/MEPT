@@ -162,7 +162,7 @@ __host__ void EField::add(unique_ptr<EModel> emodel)
 			if (der == nullptr) return false;
 			return true;
 		}
-		catch (bad_cast & e)
+		catch (bad_cast& e)
 		{
 			return false;
 		}

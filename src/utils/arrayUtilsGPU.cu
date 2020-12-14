@@ -3,13 +3,13 @@
 #include "cuda_runtime.h"
 #include "device_launch_parameters.h"
 #include "cuda_profiler_api.h"
-#include "curand_kernel.h"
 
 #include "utils/loopmacros.h"
 #include "ErrorHandling/cudaErrorCheck.h"
-//#include "ErrorHandling/cudaDeviceMacros.h"
 
 using std::cout;
+using std::cerr;
+using std::string;
 using std::invalid_argument;
 
 namespace utils
@@ -25,9 +25,47 @@ namespace utils
 				array2D[out] = &array1D[out * innerDim];
 		}
 
-		void setup2DArray(float** data1D_d, float*** data2D_d, size_t outerDim, size_t innerDim)
+		void setDev(size_t devNum)
 		{
-			CUDA_API_ERRCHK(cudaMalloc((void**)&(*data1D_d), outerDim * innerDim * sizeof(float*)));
+			int numdevs{ 0 };
+			int activedev{ -1 };
+			cudaGetDeviceCount(&numdevs);
+			cudaGetDevice(&activedev);
+			int dnumInt{ static_cast<int>(devNum) };
+			
+			if (dnumInt >= numdevs || dnumInt < 0)
+				cerr << "Invalid device number " << dnumInt << ".  Number of devices " << numdevs << ".  Using default device.";
+			else if (activedev != dnumInt)
+				cudaSetDevice(dnumInt);
+		}
+
+		string getDeviceNames()
+		{
+			cudaDeviceProp prop;
+			size_t devcnt{ getDeviceCount() };
+			string devnames;
+			for (size_t i = 0; i < devcnt; i++)
+			{
+				cudaGetDeviceProperties(&prop, i);
+				devnames += prop.name;
+				if (i != devcnt - 1) devnames += ", ";
+			}
+
+			return devnames;
+		}
+		
+		size_t getDeviceCount()
+		{
+			int numdevs{ 0 };
+			cudaGetDeviceCount(&numdevs);
+			return static_cast<size_t>(numdevs);
+		}
+		
+		void setup2DArray(float** data1D_d, float*** data2D_d, size_t outerDim, size_t innerDim, size_t devNum)
+		{
+			setDev(devNum);
+			
+			CUDA_API_ERRCHK(cudaMalloc((void**)&(*data1D_d), outerDim * innerDim * sizeof(float)));
 			CUDA_API_ERRCHK(cudaMalloc((void**)&(*data2D_d), outerDim * sizeof(float*)));
 			
 			CUDA_API_ERRCHK(cudaMemset(*data1D_d, 0, outerDim * innerDim * sizeof(float)));
@@ -36,8 +74,10 @@ namespace utils
 			CUDA_KERNEL_ERRCHK_WSYNC();
 		}
 
-		void copy2DArray(vector<vector<float>>& data, float** data1D_d, bool hostToDev)
+		void copy2DArray(vector<vector<float>>& data, float** data1D_d, bool hostToDev, size_t devNum)
 		{
+			setDev(devNum);
+			
 			size_t frontSize{ data.front().size() };
 			for (const auto& elem : data)
 				if (elem.size() != frontSize)
@@ -51,10 +91,13 @@ namespace utils
 			{
 				LOOP_OVER_1D_ARRAY(data.size(), CUDA_API_ERRCHK(cudaMemcpy(data.at(iii).data(), (*data1D_d) + data.at(0).size() * iii, data.at(0).size() * sizeof(float), cudaMemcpyDeviceToHost)));
 			}
+			CUDA_KERNEL_ERRCHK_WSYNC();
 		}
 
-		void free2DArray(float** data1D_d, float*** data2D_d)
+		void free2DArray(float** data1D_d, float*** data2D_d, size_t devNum)
 		{
+			setDev(devNum);
+			
 			CUDA_API_ERRCHK(cudaFree(*data1D_d));
 			CUDA_API_ERRCHK(cudaFree(*data2D_d));
 
@@ -62,16 +105,16 @@ namespace utils
 			*data2D_d = nullptr;
 		}
 
-		void getGPUMemInfo(size_t* free, size_t* total, int GPUidx)
+		void getGPUMemInfo(size_t* free, size_t* total, size_t devNum)
 		{ //use CUDA API to get free and total mem sizes for a specified GPU
 			int currDev{ -1 };
 			CUDA_API_ERRCHK(cudaGetDevice(&currDev));
 
-			if (currDev != GPUidx) CUDA_API_ERRCHK(cudaSetDevice(GPUidx));
+			if (currDev != devNum) CUDA_API_ERRCHK(cudaSetDevice(devNum));
 
 			CUDA_API_ERRCHK(cudaMemGetInfo(free, total));
 
-			if (currDev != GPUidx) CUDA_API_ERRCHK(cudaSetDevice(currDev));
+			if (currDev != devNum) CUDA_API_ERRCHK(cudaSetDevice(currDev));
 		}
 
 		void getCurrGPUMemInfo(size_t* free, size_t* total)

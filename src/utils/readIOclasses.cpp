@@ -17,7 +17,7 @@ namespace utils
 			for (size_t attr = 0; attr < attrNames.size(); attr++)
 			{
 				vector<float> read;
-				fileIO::readDblBin(read, folder + "/" + partName + "_" + attrNames.at(attr) + ".bin");
+				fileIO::readFltBin(read, folder + "/" + partName + "_" + attrNames.at(attr) + ".bin");
 				data_m.push_back(read);
 				if (attrNames_m.at(attr).size() > attrsize) { attrsize = attrNames_m.at(attr).size(); }
 			}

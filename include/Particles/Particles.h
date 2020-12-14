@@ -4,7 +4,6 @@
 #include <vector>
 #include <string>
 
-#include "dlldefines.h"
 #include "utils/unitsTypedefs.h"
 #include "utils/writeIOclasses.h"
 
@@ -15,17 +14,17 @@ using std::ofstream;
 using utils::fileIO::ParticleDistribution;
 
 #define STRVEC vector<string>
-#define DBLVEC vector<float>
-#define DBL2DV vector<vector<float>>
+#define FLTVEC vector<float>
+#define FLT2DV vector<vector<float>>
 
 class Particles
 {
-protected:
+protected:	
 	string name_m; //name of particle
 
 	STRVEC attributeNames_m;
-	DBL2DV origData_m; //initial data - not modified, but eventually saved to disk
-	DBL2DV currData_m; //current data - that which is being updated by iterating the sim
+	FLT2DV origData_m; //initial data - not modified, but eventually saved to disk
+	FLT2DV currData_m; //current data - that which is being updated by iterating the sim
 
 	bool initDataLoaded_m{ false };
 	bool initializedGPU_m{ false }; //consider what to do with this with multi GPU - still necessary?
@@ -33,10 +32,12 @@ protected:
 	float mass_m;
 	float charge_m;
 	size_t numberOfParticles_m;
-
+	size_t numGPUs_m;
+	vector<size_t> particleCountPerGPU_m;
+	
 	//device pointers
-	float*  currData1D_d{ nullptr }; //make vectors for handling multiple GPUs
-	float** currData2D_d{ nullptr };
+	vector<float*>  currData1D_d;
+	vector<float**> currData2D_d;
 
 	void initializeGPU(); //need to modify all of these below to account for multi GPU
 	void copyDataToGPU(bool origToGPU = true);
@@ -44,26 +45,29 @@ protected:
 	void deserialize(ifstream& in);
 
 public:
-	Particles(string name, vector<string> attributeNames, float mass, float charge, size_t numParts);
+	Particles(string name, vector<string> attributeNames, float mass, float charge, size_t numParts,
+		size_t numGPUs, vector<size_t> particleCountPerGPU);
 	Particles(ifstream& in);
 	~Particles();
 	Particles(const Particles&) = delete;
 	Particles& operator=(const Particles& otherpart) = delete;
 
 	//Access functions
-	string        name()           const;
-	const STRVEC& attributeNames() const;
-	DBL2DV&       __data(bool orig);
-	const DBL2DV& data(bool orig) const;
-	float        mass()          const;
-	float        charge()        const;
-	size_t        getNumberOfAttributes() const;
-	size_t        getNumberOfParticles()  const;
-	bool          getInitDataLoaded() const;
-	float**      getCurrDataGPUPtr() const;
+	string         name()           const;
+	const STRVEC&  attributeNames() const;
+	FLT2DV&        __data(bool orig);
+	const FLT2DV&  data(bool orig) const;
+	float          mass()          const;
+	float          charge()        const;
+	size_t         getNumberOfAttributes() const;
+	size_t         getNumberOfParticles()  const;
+	size_t         getNumParticlesPerGPU(size_t GPUind) const;
+	vector<size_t> getNumParticlesPerGPU() const;
+	bool           getInitDataLoaded() const;
+	float**        getCurrDataGPUPtr(size_t GPUind) const;
 
-	size_t        getAttrIndByName(string searchName) const;
-	string        getAttrNameByInd(size_t searchIndx) const;
+	size_t         getAttrIndByName(string searchName) const;
+	string         getAttrNameByInd(size_t searchIndx) const;
 
 	//Other functions
 	void setParticlesSource_s(float s_ion, float s_mag);
@@ -80,7 +84,7 @@ public:
 };
 
 #undef STRVEC
-#undef DBLVEC
-#undef DBL2DV
+#undef FLTVEC
+#undef FLT2DV
 
 #endif

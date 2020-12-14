@@ -5,6 +5,7 @@
 #include <string>
 
 #include "dlldefines.h"
+#include "Particles/Particles.h"
 #include "utils/unitsTypedefs.h"
 
 using std::vector;
@@ -13,8 +14,8 @@ using std::ifstream;
 using std::ofstream;
 
 #define STRVEC vector<string>
-#define DBL2DV vector<vector<float>>
-#define DBL3DV vector<vector<vector<float>>>
+#define FLT2DV vector<vector<float>>
+#define FLT3DV vector<vector<vector<float>>>
 
 class Satellite
 {
@@ -27,11 +28,14 @@ protected:
 	bool   initializedGPU_m{ false };
 
 	size_t numberOfParticles_m{ 0 };
-
-	DBL2DV   data_m; //[attribute][particle]
-	float*  satCaptrData1D_d{ nullptr }; //flattened satellite capture data on GPU
-	float** satCaptrData2D_d{ nullptr }; //2D satellite capture data on GPU
-	float** particleData2D_d{ nullptr };
+	size_t numGPUs_m;
+	vector<size_t> particleCountPerGPU_m;
+	
+	FLT2DV  data_m; //[attribute][particle]
+	vector<FLT2DV>	data_GPU_m;
+	vector<float*>  satCaptrData1D_d; //flattened satellite capture data on GPU
+	vector<float**> satCaptrData2D_d; //2D satellite capture data on GPU
+	vector<float**> particleData2D_d;
 
 	void   initializeGPU();
 	void   freeGPUMemory();
@@ -39,8 +43,8 @@ protected:
 	size_t getAttrIndByName(string name);
 
 public:
-	Satellite(string name, STRVEC attributeNames, meters altitude, bool upwardFacing, size_t numberOfParticles, float** partDataGPUPtr);
-	Satellite(ifstream& in, float** particleData2D);
+	Satellite(string name, STRVEC attributeNames, meters altitude, bool upwardFacing, size_t numberOfParticles, const std::shared_ptr<Particles>& particle, size_t numGPUs, vector<size_t> particleCountPerGPU_m);
+	Satellite(ifstream& in, const std::shared_ptr<Particles> &particle, size_t numGPUs, vector<size_t> particleCountPerGPU);
 	~Satellite();
 	Satellite(const Satellite&) = delete;
 	Satellite& operator=(const Satellite&) = delete;
@@ -49,27 +53,26 @@ public:
 	string        name() const;
 	meters        altitude() const;
 	bool	      upward() const;
-	DBL2DV&       __data();
-	const DBL2DV& data() const;
-	float**      get2DDataGPUPtr() const;
-	float*       get1DDataGPUPtr() const;
+	FLT2DV&       __data();
+	const FLT2DV& data() const;
+	float**       get2DDataGPUPtr(int GPUind) const;
+	float*        get1DDataGPUPtr(int GPUind) const;
 	size_t        getNumberOfAttributes() const;
 	size_t        getNumberOfParticles()  const;
 
 	//Other functions
-	void iterateDetector(float simtime, float dt, int blockSize); //increment time, track overall sim time, or take an argument??
-	void iterateDetectorCPU(const DBL2DV& particleData, seconds simtime, seconds dt);
+	void iterateDetector(float simtime, float dt, int blockSize, int GPUind); //increment time, track overall sim time, or take an argument??
+	void iterateDetectorCPU(const FLT2DV& particleData, seconds simtime, seconds dt);
 	void copyDataToHost(); //some sort of sim time check to verify I have iterated for the current sim time??
 	void saveDataToDisk(string folder);
 	void loadDataFromDisk(string folder);
 
-	DBL2DV removeZerosData();
+	FLT2DV removeZerosData();
 	void serialize(ofstream& out) const;
 };
 
 #undef STRVEC
-#undef DBLVEC
-#undef DBL2DV
-#undef DBL3DV
+#undef FLT2DV
+#undef FLT3DV
 
 #endif
