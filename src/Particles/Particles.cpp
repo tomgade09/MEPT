@@ -119,7 +119,7 @@ void Particles::copyDataToHost()
 		vector<vector<float>> subvec(currData_m.size(), vector<float>(end - offset));
 
 		utils::GPU::copy2DArray(subvec, &currData1D_d.at(dev), false, dev); //coming back data(GPU) -> curr(host)
-		for (int i = 0; i < subvec.size(); i++)
+		for (size_t i = 0; i < subvec.size(); i++)
 			std::copy(subvec.at(i).begin(), subvec.at(i).end(), currData_m.at(i).begin() + offset);  //add data back at the appropriate location
 
 		cerr << "::DEBUG(not error):: Particles::copyDataToHost() : copy2DArray GPU num " + to_string(dev) +

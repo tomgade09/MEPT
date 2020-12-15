@@ -26,7 +26,7 @@ Satellite::Satellite(string name, vector<string> attributeNames, meters altitude
 	name_m{ name }, attributeNames_m{ attributeNames }, altitude_m{ altitude }, upwardFacing_m{ upwardFacing }, numberOfParticles_m{ numberOfParticles }, numGPUs_m{ numGPUs }, particleCountPerGPU_m{particleCountPerGPU}
 {
 	data_GPU_m.clear();
-	for (int dev = 0; dev < numGPUs; ++dev)
+	for (size_t dev = 0; dev < numGPUs; ++dev)
 	{
 		particleData2D_d.push_back(particle->getCurrDataGPUPtr(dev));
 		data_GPU_m.push_back( vector<vector<float>>(attributeNames_m.size(), vector<float>(particleCountPerGPU.at(dev))));
@@ -39,7 +39,7 @@ Satellite::Satellite(ifstream& in, const std::shared_ptr<Particles> &particle, s
 	: numGPUs_m {numGPUs}, particleCountPerGPU_m{particleCountPerGPU}
 {
 	data_GPU_m.clear();
-	for (int dev = 0; dev < numGPUs; ++dev)
+	for (size_t dev = 0; dev < numGPUs; ++dev)
 	{
 		particleData2D_d.push_back(particle->getCurrDataGPUPtr(dev));
 		data_GPU_m.push_back(vector<vector<float>>(attributeNames_m.size(), vector<float>(particleCountPerGPU.at(dev))));
@@ -57,7 +57,7 @@ Satellite::~Satellite()
 
 void Satellite::initializeGPU()
 {
-	for (int dev = 0; dev < numGPUs_m; ++dev)
+	for (size_t dev = 0; dev < numGPUs_m; ++dev)
 	{
 		satCaptrData1D_d.push_back(nullptr);
 		satCaptrData2D_d.push_back(nullptr);
@@ -89,15 +89,15 @@ void Satellite::copyDataToHost()
 	//vector<vector<float>>  data; //[attribute][particle]
 	//data_m.clear();
 
-	for (int dev = 0; dev < numGPUs_m; ++dev)
+	for (size_t dev = 0; dev < numGPUs_m; ++dev)
 	{
 		// Copy data in data_m arrays
 		utils::GPU::copy2DArray(data_GPU_m.at(dev), &satCaptrData1D_d.at(dev), false, dev);
 	}
 	data_m = data_GPU_m.at(0);
-	for (int dev = 1; dev < numGPUs_m; ++dev)
+	for (size_t dev = 1; dev < numGPUs_m; ++dev)
 	{
-		for (int attr = 0; attr < attributeNames_m.size(); attr++)
+		for (size_t attr = 0; attr < attributeNames_m.size(); attr++)
 		{
 			// Copy data_m arrays into data_m array
 			data_m.at(attr).reserve(data_m.at(attr).size() + data_GPU_m.at(dev).at(attr).size());
@@ -115,7 +115,7 @@ void Satellite::freeGPUMemory()
 {
 	if (!initializedGPU_m) { return; }
 
-	for (int dev = 0; dev < numGPUs_m; ++dev)
+	for (size_t dev = 0; dev < numGPUs_m; ++dev)
 	{
 		utils::GPU::free2DArray(&satCaptrData1D_d.at(dev), &satCaptrData2D_d.at(dev), dev);
 	}

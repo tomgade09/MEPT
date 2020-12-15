@@ -414,7 +414,7 @@ void Simulation::setupGPU()
 
 		// For the author's machine, MP count gives a good metric to split tasks evenly
 		// In future: either optimize for specific hardware create a more precise equation
-		float compute = static_cast<float>(/*devProp.clockRate/1024 * */devProp.multiProcessorCount);
+		float compute = static_cast<float>(devProp.clockRate/1024 * devProp.multiProcessorCount);
 		computeTotal += compute;
 		computeSplit_m.push_back(compute);  //need to use floats to get decimal numbers
 	}
