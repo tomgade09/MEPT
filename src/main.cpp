@@ -9,7 +9,7 @@ int main(int argc, char* argv[])
 	float dt{ 0.001f };                      //time step size delta t
 	float simmin{ 628565.8510817f };         //minimum altitude of the sim - when particle goes <, it's not tracked any more
 	float simmax{ 19881647.2473464f };       //maximum altitude of the sim
-	int numiter{ 50000 };                    //number of timesteps we do for each particle
+	int numiter{ 100000 };                    //number of timesteps we do for each particle
 	int numParts{ 3456000 };                 //number of particles in our simulation
 	
 	//create an instance of the container class that holds the entire PTEM simulation
@@ -23,7 +23,7 @@ int main(int argc, char* argv[])
 	sim.setBFieldModel("DipoleBLUT", { 72.0f, 637.12f, 1000000 });
 	
 	//no E Fields are used yet, although they could be specified as below
-	//sim->addEFieldModel("QSPS", { 3185500.0f, 6185500.0f, 0.02f, 6556500.0f, 9556500.0f, 0.04f });
+	//sim.addEFieldModel("QSPS", { 6556500.0f, 9556500.0f, 0.04f }); //{ 3185500.0f, 6185500.0f, 0.02f });// { 6556500.0f, 9556500.0f, 0.04f});
 
 	//create a container for the particles that we will generate
 	//first argument is the name of the particle, second is the mass, third is the electric charge, and fourth
