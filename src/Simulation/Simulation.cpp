@@ -385,7 +385,7 @@ void Simulation::setBFieldModel(string name, vector<float> args, bool save)
 	} while (dev < gpuCount_m);
 }
 
-void Simulation::setBFieldModel(unique_ptr<BModel> BModelptr)
+/*void Simulation::setBFieldModel(unique_ptr<BModel> BModelptr)
 {
 	//Assume set for all devices
 	BFieldModel_m.clear(); //Empty vector array if already allocated
@@ -393,10 +393,10 @@ void Simulation::setBFieldModel(unique_ptr<BModel> BModelptr)
 	do
 	{
 		utils::GPU::setDev(dev);
-		BFieldModel_m.push_back(std::move(BModelptr));
+		BFieldModel_m.push_back(std::move(BModelptr));  //doesn't work - std::move will only work on an object the first time
 		dev++;
 	} while (dev < gpuCount_m);
-}
+}*/
 
 void Simulation::addEFieldModel(string name, vector<float> args, bool save)
 {
