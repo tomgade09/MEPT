@@ -15,6 +15,7 @@
 #include "utils/loopmacros.h"
 #include "Simulation/Simulation.h"
 #include "ErrorHandling/cudaErrorCheck.h"
+#include "ErrorHandling/cudaDeviceMacros.h"
 
 using std::cout;
 using std::cerr;
@@ -27,6 +28,11 @@ using std::stringstream;
 
 //CUDA Variables
 constexpr size_t BLOCKSIZE{ 256 }; //Number of threads per block
+
+__device__ Sat_d sats_d[32];       //allow for 32 satellites in the simulation - memory will probably run out long before this many are used, but will also check from host side to prevent overflows
+
+//forward declaration for kernel in another file - requires rdc flag to be set
+__device__ void satelliteDetector(Sat_d sat, float** data_d, const float v, const float v0, const float s, const float s0, int ind, float simtime, float dt);
 
 namespace physics
 {
@@ -115,7 +121,15 @@ namespace physics
 		}
 	}
 
-	__global__ void iterateParticle(float** currData_d, BModel** bmodel, EField* efield,
+	__global__ void setSat(int ind, float** capture_d, float altitude, bool upward)
+	{
+		//ZEROTH_THREAD_ONLY(
+			if (ind >= 32) return;   //invalid memory location
+			sats_d[ind] = Sat_d{ capture_d, altitude, upward };
+		//);
+	}
+
+	__global__ void iterateParticle(float** currData_d, BModel** bmodel, EField* efield, const int numsats,
 		const float simtime, const float dt, const float mass, const float charge, const float simmin, const float simmax, int len)
 	{
 		int idx{ blockIdx.x * blockDim.x + threadIdx.x };
@@ -130,11 +144,8 @@ namespace physics
 		else if (t_inc > simtime) //particle hasn't "entered the sim" yet
 			return;
 		
-		float v { currData_d[0][idx] };
-		//float mu{ currData_d[1][idx] };
+		float v{ currData_d[0][idx] };
 		float s{ currData_d[2][idx] };
-		//float s0{ currData_d[5][idx] };
-		//float v0{ currData_d[6][idx] };
 
 		//args array: [ps_0, mu, q, m, simtime]
 		const float args[]{ s, currData_d[1][idx], charge, mass, simtime };
@@ -145,15 +156,17 @@ namespace physics
 		//if we use the ds = (v0 * dt), s will be lower down than where it would end up really (due to the fact that the mirror force acting along ds
 		//will slow v down as the particle travels along ds), so I take the average of the two and it seems close enough s = (v0 + (v0 + dv)) / 2 * dt = v0 + dv/2 * dt
 		//hence the /2 factor below - FYI, this was checked by the particle's energy (steady state, no E Field) remaining the same throughout the simulation
-
-		float v_pr{ v + RungeKutta4CUDA(v, dt, args, *bmodel, efield) };
-
-		currData_d[5][idx] = s; //s0
-		currData_d[6][idx] = v; //v0
-		currData_d[0][idx] = v_pr; //v
-		s += (v + v_pr) / 2 * dt; //s
+		
+		float s0{ s };
+		float v0{ v };
+		v += RungeKutta4CUDA(v, dt, args, *bmodel, efield);
+		s += (v + v0) / 2 * dt; //s
+		currData_d[0][idx] = v; //v
 		currData_d[2][idx] = s;
 
+		for (int sat = 0; sat < numsats; sat++)  //no divergence here - number of satellites is set before sim start
+			satelliteDetector(sats_d[sat], currData_d, v, v0, s, s0, idx, simtime, dt);
+		
 		if (s < simmin || s > simmax) //particle is out of sim to the bottom or the top so set t_escape
 			currData_d[4][idx] = simtime;
 	}
@@ -207,11 +220,26 @@ void Simulation::initializeSimulation()
 	}
 	
 	if (tempSats_m.size() > 0)
-	{//create satellites 
-		LOOP_OVER_1D_ARRAY(tempSats_m.size(), createSatellite(tempSats_m.at(iii).get()));
+	{//create satellites
+		if (tempSats_m.size() > 32) cout << "Simulation::initializeSimulation: Warning: more than 32 satellites specified.  Only 32 will be used\n";
+		
+		for (int i = 0; i < (int)tempSats_m.size(); i++)
+		{
+			createSatellite(tempSats_m.at(i).get());
+
+			if (i < 32)
+			{
+				Satellite* s{ satPartPairs_m.at(i)->satellite.get() };
+				for (int dev = 0; dev < gpuCount_m; dev++)
+				{
+					utils::GPU::setDev(dev);
+					physics::setSat <<< 1, 1 >>> (i, s->get2DDataGPUPtr(dev), s->altitude(), s->upward());
+				}
+			}
+		}
 	}
 	else
-		cerr << "Simulation::initializeSimulation: warning: no satellites created" << endl;
+		cerr << "Simulation::initializeSimulation: Warning: no satellites created" << endl;
 	
 	initialized_m = true;
 }
@@ -263,22 +291,30 @@ void Simulation::iterateSimulation(size_t numberOfIterations, size_t checkDoneEv
 		for (int dev = 0; dev < gpuCount_m; dev++) //iterate over devices - everything is non-blocking / async in loop
 		{
 			CUDA_API_ERRCHK(cudaSetDevice((int)dev));
-			if (cudaloopind % checkDoneEvery == 0) { CUDA_API_ERRCHK(cudaMemset(simDone_d.at(dev), true, sizeof(bool))); } //if it's going to be checked in this iter (every checkDoneEvery iterations), set to true
 
 			for (size_t part = 0; part < particles_m.size(); part++)
 			{
 				Particles* p{ particles_m.at(part).get() };
-				iterateParticle <<< grid.at(dev).at(part), BLOCKSIZE >>> (p->getCurrDataGPUPtr(dev), BFieldModel_m.at(dev)->this_dev(), EFieldModel_m.at(dev)->this_dev(),
-					simTime_m, dt_m, p->mass(), p->charge(), simMin_m, simMax_m, p->getNumParticlesPerGPU(dev));
-
-				//kernel will set boolean to false if at least one particle is still in sim
-				if (cudaloopind % checkDoneEvery == 0)
-					simActiveCheck <<< grid.at(dev).at(part), BLOCKSIZE >>> (p->getCurrDataGPUPtr(dev), simDone_d.at(dev), p->getNumParticlesPerGPU(dev));
+				iterateParticle <<< grid.at(dev).at(part), BLOCKSIZE >>> (p->getCurrDataGPUPtr(dev), BFieldModel_m.at(dev)->this_dev(), EFieldModel_m.at(dev)->this_dev(), 
+					(int)satPartPairs_m.size(), simTime_m, dt_m, p->mass(), p->charge(), simMin_m, simMax_m, p->getNumParticlesPerGPU(dev));
 			}
 		}
 
 		if (cudaloopind % checkDoneEvery == 0)
 		{
+			for (int dev = 0; dev < gpuCount_m; dev++)
+			{   //synchronize all devices
+				CUDA_API_ERRCHK(cudaSetDevice((int)dev));
+				CUDA_KERNEL_ERRCHK_WSYNC_WABORT();   //side effect: cudaDeviceSynchronize() needed for computeKernel to function properly, which this macro provides
+				CUDA_API_ERRCHK(cudaMemset(simDone_d.at(dev), true, sizeof(bool))); //if it's going to be checked in this iter (every checkDoneEvery iterations), set to true
+				for (size_t part = 0; part < particles_m.size(); part++)
+				{   //check if every Particles instance has completely escaped the simulation
+					Particles* p{ particles_m.at(0).get() };
+					simActiveCheck <<< grid.at(dev).at(part), BLOCKSIZE >>> (p->getCurrDataGPUPtr(dev), simDone_d.at(dev), p->getNumParticlesPerGPU(dev));
+				}
+				CUDA_KERNEL_ERRCHK_WSYNC_WABORT();
+			}
+
 			string loopStatus;
 			stringstream out;
 
@@ -292,26 +328,9 @@ void Simulation::iterateSimulation(size_t numberOfIterations, size_t checkDoneEv
 
 			Log_m->createEntry(loopStatus);
 			cout << loopStatus << "\n";
-		}
-		
-		for (int dev = 0; dev < gpuCount_m; dev++)
-		{   //synchronize all devices
-			CUDA_API_ERRCHK(cudaSetDevice((int)dev));
-			CUDA_KERNEL_ERRCHK_WSYNC_WABORT();   //side effect: cudaDeviceSynchronize() needed for computeKernel to function properly, which this macro provides
-		}
-
-		for (int dev = 0; dev < gpuCount_m; dev++)
-			for (auto sat = satPartPairs_m.begin(); sat < satPartPairs_m.end(); sat++)
-				(*sat)->satellite->iterateDetector(simTime_m, dt_m, BLOCKSIZE, dev);
-		
-		for (int dev = 0; dev < gpuCount_m; dev++)
-		{   //synchronize all devices
-			CUDA_API_ERRCHK(cudaSetDevice((int)dev));
-			CUDA_KERNEL_ERRCHK_WSYNC_WABORT();   //side effect: cudaDeviceSynchronize() needed for computeKernel to function properly, which this macro provides
-		}
-
-		if (cudaloopind % checkDoneEvery == 0)
-		{
+			
+		//if (cudaloopind % checkDoneEvery == 0)
+		//{
 			bool done{ true };
 			for (int dev = 0; dev < gpuCount_m; dev++)
 			{

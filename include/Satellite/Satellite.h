@@ -17,6 +17,13 @@ using std::ofstream;
 #define FLT2DV vector<vector<float>>
 #define FLT3DV vector<vector<vector<float>>>
 
+struct Sat_d
+{
+	float** capture_d{ nullptr };
+	float   altitude{ 0.0f };
+	bool    upward{ false };
+};
+
 class Satellite
 {
 protected:
@@ -59,9 +66,10 @@ public:
 	float*        get1DDataGPUPtr(int GPUind) const;
 	size_t        getNumberOfAttributes() const;
 	size_t        getNumberOfParticles()  const;
+	Sat_d         getSat_d(int GPUind) const;
 
 	//Other functions
-	void iterateDetector(float simtime, float dt, int blockSize, int GPUind); //increment time, track overall sim time, or take an argument??
+	//void iterateDetector(float simtime, float dt, int blockSize, int GPUind); //increment time, track overall sim time, or take an argument??
 	void iterateDetectorCPU(const FLT2DV& particleData, seconds simtime, seconds dt);
 	void copyDataToHost(); //some sort of sim time check to verify I have iterated for the current sim time??
 	void saveDataToDisk(string folder);

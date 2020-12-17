@@ -251,6 +251,11 @@ size_t Satellite::getNumberOfParticles() const
 	return numberOfParticles_m;
 }
 
+Sat_d Satellite::getSat_d(int GPUind) const
+{
+	return Sat_d{ satCaptrData2D_d.at(GPUind), altitude_m, upwardFacing_m };
+}
+
 void Satellite::serialize(ofstream& out) const
 {
 	auto writeStrBuf = [&](const stringbuf& sb)
