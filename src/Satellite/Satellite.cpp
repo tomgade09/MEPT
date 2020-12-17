@@ -10,7 +10,7 @@
 #include "utils/serializationHelpers.h"
 #include "ErrorHandling/simExceptionMacros.h"
 
-using std::cerr;
+using std::clog;
 using std::ofstream;
 using std::streambuf;
 using std::to_string;
@@ -64,7 +64,7 @@ void Satellite::initializeGPU()
 		utils::GPU::setup2DArray(&satCaptrData1D_d.at(dev), &satCaptrData2D_d.at(dev),
 			attributeNames_m.size(), particleCountPerGPU_m.at(dev), dev);
 
-		cerr << "::DEBUG(not error):: Satellite::initializeGPU() : setup2DArray GPU num " + to_string(dev) +
+		clog << "Satellite::initializeGPU() : setup2DArray GPU num " + to_string(dev) +
 			    ": length " + to_string(particleCountPerGPU_m.at(dev));
 	}
 	initializedGPU_m = true;

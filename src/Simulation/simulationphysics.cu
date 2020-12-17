@@ -284,6 +284,23 @@ void Simulation::iterateSimulation(size_t numberOfIterations, size_t checkDoneEv
 			}
 		}
 
+		if (cudaloopind % checkDoneEvery == 0)
+		{
+			string loopStatus;
+			stringstream out;
+
+			out << setw(to_string(numberOfIterations).size()) << cudaloopind;
+			loopStatus = out.str() + " / " + to_string(numberOfIterations) + "  |  Sim Time (s): ";
+			out.str("");
+			out.clear();
+
+			out << setw(to_string((int)(numberOfIterations)*dt_m).size()) << fixed << simTime_m;
+			loopStatus += out.str() + "  |  Real Time Elapsed (s): " + to_string(Log_m->timeElapsedSinceEntry_s(initEntry));
+
+			Log_m->createEntry(loopStatus);
+			cout << loopStatus << "\n";
+		}
+		
 		for (int dev = 0; dev < gpuCount_m; dev++)
 		{   //synchronize all devices
 			CUDA_API_ERRCHK(cudaSetDevice((int)dev));
@@ -293,31 +310,15 @@ void Simulation::iterateSimulation(size_t numberOfIterations, size_t checkDoneEv
 		for (int dev = 0; dev < gpuCount_m; dev++)
 			for (auto sat = satPartPairs_m.begin(); sat < satPartPairs_m.end(); sat++)
 				(*sat)->satellite->iterateDetector(simTime_m, dt_m, BLOCKSIZE, dev);
-
+		
 		for (int dev = 0; dev < gpuCount_m; dev++)
 		{   //synchronize all devices
 			CUDA_API_ERRCHK(cudaSetDevice((int)dev));
 			CUDA_KERNEL_ERRCHK_WSYNC_WABORT();   //side effect: cudaDeviceSynchronize() needed for computeKernel to function properly, which this macro provides
 		}
-		
+
 		if (cudaloopind % checkDoneEvery == 0)
-		{       //only executes once
-			{
-				string loopStatus;
-				stringstream out;
-
-				out << setw(to_string(numberOfIterations).size()) << cudaloopind;
-				loopStatus = out.str() + " / " + to_string(numberOfIterations) + "  |  Sim Time (s): ";
-				out.str("");
-				out.clear();
-
-				out << setw(to_string((int)(numberOfIterations)*dt_m).size()) << fixed << simTime_m;
-				loopStatus += out.str() + "  |  Real Time Elapsed (s): " + to_string(Log_m->timeElapsedSinceEntry_s(initEntry));
-
-				Log_m->createEntry(loopStatus);
-				cout << loopStatus << "\n";
-			}
-
+		{
 			bool done{ true };
 			for (int dev = 0; dev < gpuCount_m; dev++)
 			{

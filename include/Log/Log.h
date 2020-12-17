@@ -8,7 +8,8 @@
 #include <thread>
 #include <iostream>
 #include <sstream>
-#include <fstream>
+#include <mutex>
+#include <condition_variable>
 
 using std::string;
 using std::vector;
@@ -16,6 +17,7 @@ using std::ofstream;
 using std::streambuf;
 using std::unique_ptr;
 using std::stringstream;
+typedef std::condition_variable condvar;
 
 class Log
 {
@@ -34,13 +36,20 @@ private:
 	vector<Entry> entries_m;
 
 	stringstream cerr_m; //stringstream to capture cerr so we can check it / write to log
-	streambuf*   cerrBufferBackup_m{ std::cerr.rdbuf() };
-	std::thread  cerrReadThread_m;
-	bool         check_m{ true };
-	bool         writing_m{ false };
+	stringstream clog_m; //same facility for clog
+	streambuf*   cerrBufferBackup_m{ std::cerr.rdbuf() }; //save old buffer so we can restore it
+	streambuf*   clogBufferBackup_m{ std::clog.rdbuf() };
 
-	void saveEntry(const Entry& entr);
-	void cerrCheck();
+	//Threads and concurrency associated variables
+	std::thread  strmRead_m;
+	std::thread  logWrite_m;
+	bool         check_m{ true };                         //check cerr and clog for log entries while this is true
+	bool         write_m{ true };                         //set to true while writing to file
+	condvar      writeReady_m;                            //condition variable that is signaled when a write to file is ready
+	std::mutex   mutex_m;                                 //mutex associated with locks acquired
+
+	void writeEntries();
+	void streamCheck();
 
 public:
 	Log(string logFileName);

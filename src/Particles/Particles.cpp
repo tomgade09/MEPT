@@ -9,6 +9,7 @@
 #include "utils/serializationHelpers.h"
 
 using std::cout;
+using std::clog;
 using std::cerr;
 using std::endl;
 using std::ofstream;
@@ -54,7 +55,7 @@ void Particles::initializeGPU()
 		currData2D_d.push_back(nullptr);
 		utils::GPU::setup2DArray(&currData1D_d.at(i), &currData2D_d.at(i), attributeNames_m.size() + 2,
 			particleCountPerGPU_m.at(i), i);
-		cerr << "::DEBUG(not error):: Particles::initializeGPU() : setup2DArray GPU num " + to_string(i) +
+		clog << "Particles::initializeGPU() : setup2DArray GPU num " + to_string(i) +
 			    ": num particles " + to_string(particleCountPerGPU_m.at(i));
 	}
 	initializedGPU_m = true;
@@ -98,7 +99,7 @@ void Particles::copyDataToGPU(bool origToGPU)
 			utils::GPU::copy2DArray(subvec, &currData1D_d.at(dev), true, dev); //sending to curr(host) -> data(GPU)
 		}
 
-		cerr << "::DEBUG(not error):: Particles::copyDataToGPU() : copy2DArray GPU num " + to_string(dev) +
+		clog << "Particles::copyDataToGPU() : copy2DArray GPU num " + to_string(dev) +
 			": start " + to_string(offset) + ": end " + to_string(end) + ": length " + to_string(subvec.at(0).size());
 		
 		offset = end;
@@ -122,7 +123,7 @@ void Particles::copyDataToHost()
 		for (size_t i = 0; i < subvec.size(); i++)
 			std::copy(subvec.at(i).begin(), subvec.at(i).end(), currData_m.at(i).begin() + offset);  //add data back at the appropriate location
 
-		cerr << "::DEBUG(not error):: Particles::copyDataToHost() : copy2DArray GPU num " + to_string(dev) +
+		clog << "Particles::copyDataToHost() : copy2DArray GPU num " + to_string(dev) +
 			": start " + to_string(offset) + ": end " + to_string(end) + ": length " + to_string(subvec.at(0).size());
 		
 		offset = end;

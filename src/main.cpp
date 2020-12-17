@@ -9,7 +9,7 @@ int main(int argc, char* argv[])
 	float dt{ 0.001f };                      //time step size delta t
 	float simmin{ 628565.8510817f };         //minimum altitude of the sim - when particle goes <, it's not tracked any more
 	float simmax{ 19881647.2473464f };       //maximum altitude of the sim
-	int numiter{ 100000 };                    //number of timesteps we do for each particle
+	int numiter{ 50000 };                    //number of timesteps we do for each particle
 	int numParts{ 3456000 };                 //number of particles in our simulation
 	
 	//create an instance of the container class that holds the entire PTEM simulation
