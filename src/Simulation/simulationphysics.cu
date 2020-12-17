@@ -118,36 +118,26 @@ namespace physics
 	__global__ void iterateParticle(float** currData_d, BModel** bmodel, EField* efield,
 		const float simtime, const float dt, const float mass, const float charge, const float simmin, const float simmax, int len)
 	{
-		int thdInd{ blockIdx.x * blockDim.x + threadIdx.x };
+		int idx{ blockIdx.x * blockDim.x + threadIdx.x };
 
-		if (thdInd >= len) return;
+		if (idx >= len) return;
 		
-		float* s_d{ currData_d[2] };
-		float* t_incident_d{ currData_d[3] };
-		float* t_escape_d{ currData_d[4] };
-		float* s0_d{ currData_d[5] };
-		float* v0_d{ currData_d[6] };
+		float t_inc{ currData_d[3][idx] };
+		float t_esc{ currData_d[4][idx] };
 		
-		if (t_escape_d[thdInd] >= 0.0f) //particle has escaped, t_escape is >= 0 iff it has both entered previously and is currently outside the sim boundaries
+		if (t_esc >= 0.0f) //particle has escaped, t_escape is >= 0 iff it has both entered previously and is currently outside the sim boundaries
 			return;
-		else if (t_incident_d[thdInd] > simtime) //particle hasn't "entered the sim" yet
+		else if (t_inc > simtime) //particle hasn't "entered the sim" yet
 			return;
-		else if (s_d[thdInd] < simmin) //particle is out of sim to the bottom and t_escape not set yet
-		{
-			t_escape_d[thdInd] = simtime;
-			return;
-		}
-		else if (s_d[thdInd] > simmax) //particle is out of sim to the top and t_escape not set yet
-		{//maybe eventaully create new particle with initial characteristics on escape
-			t_escape_d[thdInd] = simtime;
-			return;
-		}
-
-		float* v_d{ currData_d[0] }; //these aren't needed if any of the above conditions is true
-		const float* mu_d{ currData_d[1] };
+		
+		float v { currData_d[0][idx] };
+		//float mu{ currData_d[1][idx] };
+		float s{ currData_d[2][idx] };
+		//float s0{ currData_d[5][idx] };
+		//float v0{ currData_d[6][idx] };
 
 		//args array: [ps_0, mu, q, m, simtime]
-		const float args[]{ s_d[thdInd], mu_d[thdInd], charge, mass, simtime };
+		const float args[]{ s, currData_d[1][idx], charge, mass, simtime };
 
 		//RK4 (plus v0 in this case) gives v at the next time step (indicated vf in this note):
 		//for downgoing (as an example), due to the mirror force, vf will be lower than v0 as the mirror force is acting in the opposite direction as v
@@ -156,13 +146,16 @@ namespace physics
 		//will slow v down as the particle travels along ds), so I take the average of the two and it seems close enough s = (v0 + (v0 + dv)) / 2 * dt = v0 + dv/2 * dt
 		//hence the /2 factor below - FYI, this was checked by the particle's energy (steady state, no E Field) remaining the same throughout the simulation
 
-		float v{ v_d[thdInd] };
 		float v_pr{ v + RungeKutta4CUDA(v, dt, args, *bmodel, efield) };
-		
-		s0_d[thdInd] = args[0];
-		v0_d[thdInd] = v;
-		v_d[thdInd] = v_pr;
-		s_d[thdInd] = args[0] + (v + v_pr) / 2 * dt;
+
+		currData_d[5][idx] = s; //s0
+		currData_d[6][idx] = v; //v0
+		currData_d[0][idx] = v_pr; //v
+		s += (v + v_pr) / 2 * dt; //s
+		currData_d[2][idx] = s;
+
+		if (s < simmin || s > simmax) //particle is out of sim to the bottom or the top so set t_escape
+			currData_d[4][idx] = simtime;
 	}
 
 	__host__ void iterateParticle(float* vpara, float* mu, float* s, float* t_incident, float* t_escape, BModel* bmodel, EField* efield,
