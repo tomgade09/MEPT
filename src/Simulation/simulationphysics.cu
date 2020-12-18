@@ -27,7 +27,7 @@ using std::make_unique;
 using std::stringstream;
 
 //CUDA Variables
-constexpr size_t BLOCKSIZE{ 256 }; //Number of threads per block
+constexpr size_t BLOCKSIZE{ 64 }; //Number of threads per block
 
 __device__ Sat_d sats_d[32];       //allow for 32 satellites in the simulation - memory will probably run out long before this many are used, but will also check from host side to prevent overflows
 

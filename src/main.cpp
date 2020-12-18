@@ -40,7 +40,7 @@ int main(int argc, char* argv[])
 	sim.getLog()->createEntry("     Pitch : " + std::to_string(numParts / (96)) + " E bins, " + std::to_string(180) + " - " + std::to_string(0) + " deg");
 
 	pd.addEnergyRange(96, 0.5f, 4.5f);
-	pd.addPitchRange(36000, 180.0f, 0.0f);
+	pd.addPitchRange(36000, 0.0f, 180.0f);
 
 	sim.particles(0)->loadDistFromPD(pd, sim.simMin(), sim.simMax());
 	

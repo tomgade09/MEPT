@@ -36,7 +36,23 @@ Simulation::Simulation(float dt, float simMin, float simMax) :
 	auto in_time_t = system_clock::to_time_t(system_clock::now());
 	dataout << "../_dataout/" << put_time(localtime(&in_time_t), "%C%m%d_%H.%M.%S/");
 
-	path datadir{ dataout.str() };
+	path datadir{ dataout.str() };	
+	if (!exists("../_dataout/"))
+	{
+		try
+		{
+			if (!exists("../bin/"))
+				throw invalid_argument("");
+			create_directory("../_dataout/");
+		}
+		catch(std::exception& e)
+		{
+			cout << "Exception: " << e.what() << "\n";
+			cout << "Ensure you are running from \"PTEM/bin\".  Current path: " << absolute("./") << "\n";
+			exit(1);
+		}
+	}
+	
 	if (!exists(datadir))
 	{
 		try
@@ -52,7 +68,7 @@ Simulation::Simulation(float dt, float simMin, float simMax) :
 		catch (std::exception& e)
 		{
 			cout << "Exception: " << e.what() << "\n";
-			cout << "Ensure you are running from \"PTEM/bin\".  Absolute path: " << absolute(datadir) << "\n";
+			cout << "Ensure you are running from \"PTEM/bin\".  Current path: " << absolute("./") << "\n";
 			exit(1);
 		}
 	}
