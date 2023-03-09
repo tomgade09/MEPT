@@ -5,6 +5,7 @@
 #include <sstream>
 
 //CUDA includes
+#include "utils/arrayUtilsGPU.h"
 #include "device_launch_parameters.h"
 #include "ErrorHandling/cudaErrorCheck.h"
 #include "ErrorHandling/cudaDeviceMacros.h"
@@ -55,6 +56,9 @@ namespace EField_d
 __host__ __device__ EField::EField()/*bool useGPU) : useGPU_m{ useGPU }*/
 {
 	#ifndef __CUDA_ARCH__ //host code
+	int sz{ (int)utils::GPU::getDeviceCount() };
+	this_d.resize(sz);
+	emodels_d.resize(sz);
 	if(useGPU_m) setupEnvironment();
 	#endif /* !__CUDA_ARCH__ */
 }
@@ -110,18 +114,31 @@ __host__ bool EField::timeDependent() const
 
 __host__ void EField::setupEnvironment()
 {
-	CUDA_API_ERRCHK(cudaMalloc((void**)&this_d, sizeof(EField)));                  //allocate memory for EField
-	CUDA_API_ERRCHK(cudaMalloc((void**)&emodels_d, sizeof(EModel*) * capacity_d)); //allocate memory for EModel* array
-	CUDA_API_ERRCHK(cudaMemset(emodels_d, 0, sizeof(EModel*) * capacity_d));       //clear memory
-	
-	EField_d::setupEnvironment_d <<< 1, 1 >>> (this_d, emodels_d);
-	CUDA_KERNEL_ERRCHK_WSYNC();
+	#ifndef __CUDA_ARCH__
+	for (size_t i = 0; i < this_d.size(); i++)
+	{
+		utils::GPU::setDev(i);
+
+		CUDA_API_ERRCHK(cudaMalloc((void**)&this_d.at(i), sizeof(EField)));                  //allocate memory for EField
+		CUDA_API_ERRCHK(cudaMalloc((void**)&emodels_d.at(i), sizeof(EModel*) * capacity_d)); //allocate memory for EModel* array
+		CUDA_API_ERRCHK(cudaMemset(emodels_d.at(i), 0, sizeof(EModel*) * capacity_d));       //clear memory
+
+		EField_d::setupEnvironment_d <<< 1, 1 >>> (this_d.at(i), emodels_d.at(i));
+		CUDA_KERNEL_ERRCHK_WSYNC();
+	}
+	#endif
 }
 
 __host__ void EField::deleteEnvironment()
 {
-	CUDA_API_ERRCHK(cudaFree(this_d));
-	CUDA_API_ERRCHK(cudaFree(emodels_d));
+	#ifndef __CUDA_ARCH__
+	for (size_t i = 0; i < this_d.size(); i++)
+	{
+		utils::GPU::setDev(i);
+		CUDA_API_ERRCHK(cudaFree(this_d.at(i)));
+		CUDA_API_ERRCHK(cudaFree(emodels_d.at(i)));
+	}
+	#endif
 }
 
 #ifndef __CUDA_ARCH__ //host code
@@ -132,26 +149,31 @@ __host__ EModel* EField::emodel(int ind) const
 
 __host__ void EField::add(unique_ptr<EModel> emodel)
 {
-	if (capacity_d == size_d && useGPU_m)
+	for (size_t i = 0; i < this_d.size(); i++)
 	{
-		EModel** oldArray{ emodels_d }; //retain so we can cudaFree at the end
-		capacity_d += 5;
+		utils::GPU::setDev(i);
+
+		if (capacity_d == size_d && useGPU_m)
+		{
+			EModel** oldArray{ emodels_d.at(i) }; //retain so we can cudaFree at the end
+			capacity_d += 5;
 		
-		CUDA_API_ERRCHK(cudaMalloc((void**)&emodels_d, sizeof(EModel*) * capacity_d)); //create new array that is 5 larger in capacity than the previous
-		CUDA_API_ERRCHK(cudaMemset(emodels_d, 0, sizeof(EModel*) * capacity_d));
+			CUDA_API_ERRCHK(cudaMalloc((void**)&emodels_d.at(i), sizeof(EModel*) * capacity_d)); //create new array that is 5 larger in capacity than the previous
+			CUDA_API_ERRCHK(cudaMemset(emodels_d.at(i), 0, sizeof(EModel*) * capacity_d));
 
-		EField_d::increaseCapacity_d <<< 1, 1 >>> (this_d, emodels_d, capacity_d);
-		CUDA_KERNEL_ERRCHK();
+			EField_d::increaseCapacity_d <<< 1, 1 >>> (this_d.at(i), emodels_d.at(i), capacity_d);
+			CUDA_KERNEL_ERRCHK();
 
-		CUDA_API_ERRCHK(cudaFree(oldArray));
-	}
+			CUDA_API_ERRCHK(cudaFree(oldArray));
+		}
 	
-	//add elem to dev
-	if (useGPU_m)
-	{
-		EField_d::add_d <<< 1, 1 >>> (this_d, emodel->this_dev());
-		CUDA_KERNEL_ERRCHK_WSYNC();
-		size_d++;
+		//add elem to dev
+		if (useGPU_m)
+		{
+			EField_d::add_d <<< 1, 1 >>> (this_d.at(i), emodel->this_dev(i));
+			CUDA_KERNEL_ERRCHK_WSYNC();
+			size_d++;
+		}
 	}
 
 	auto checkIfDerived = [](const EModel* model)
@@ -173,23 +195,13 @@ __host__ void EField::add(unique_ptr<EModel> emodel)
 	//need to add alut_m++ condition, maybe make lambda a template?
 	emodels_m.push_back(move(emodel));
 }
-#endif /* !__CUDA_ARCH__ */
 
-__device__ void EField::add(EModel* emodel)
+__host__ EField* EField::this_dev(int GPUind) const
 {
-	emodels_d[size_d] = emodel;
-	size_d++;
+	return this_d.at(GPUind);
 }
 
-__host__ __device__ int EField::capacity() const
-{
-	return capacity_d;
-}
-
-__host__ __device__ int EField::size() const
-{
-	return size_d;
-}
+#else
 
 __device__ void EField::capacity(int cap)
 {
@@ -205,10 +217,23 @@ __device__ void EField::emodelArray_d(EModel** emodels)
 {
 	emodels_d = emodels;
 }
-	
-__host__ EField* EField::this_dev() const
+
+__device__ void EField::add(EModel* emodel)
 {
-	return this_d;
+	emodels_d[size_d] = emodel;
+	size_d++;
+}
+
+#endif /* !__CUDA_ARCH__ */
+
+__host__ __device__ int EField::capacity() const
+{
+	return capacity_d;
+}
+
+__host__ __device__ int EField::size() const
+{
+	return size_d;
 }
 
 __host__ __device__ Vperm EField::getEFieldAtS(const meters s, const seconds t) const

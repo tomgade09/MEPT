@@ -4,6 +4,7 @@
 #include <iostream>
 #include <sstream>
 #include <iomanip>
+#include <typeinfo>
 
 //file read/write exception checking (probably should mostly wrap fileIO functions)
 #define FILE_RDWR_EXCEP_CHECK(x) \
@@ -15,62 +16,78 @@ namespace utils
 {
 	namespace fileIO
 	{
-		DLLEXP void readFltBin(vector<float>& arrayToReadInto, string filename)
-		{
-			std::ifstream binFile{ filename, std::ios::binary };
-			if (!binFile.is_open())
-				throw std::invalid_argument("fileIO::readFltBin: could not open file " + filename + " for reading");
-
-			binFile.seekg(0, binFile.end);
-			size_t length{ (size_t)binFile.tellg() / sizeof(float) };
-			binFile.seekg(0, binFile.beg);
-			binFile.close();
-
-			arrayToReadInto.resize(length);
-
-			readFltBin(arrayToReadInto, filename, length);
-		}
-
-		DLLEXP void readFltBin(vector<float>& arrayToReadInto, string filename, size_t numOfFltsToRead)
-		{
-			if (arrayToReadInto.size() < numOfFltsToRead)
-				throw std::invalid_argument("fileIO::readFltBin: vector is not big enough to contain the data being read from file " + filename);
+		//bin functions
+		template <typename T1>
+		DLLEXP void readBin(vector<T1>& arrayToReadInto, string filename, size_t numOfNumsToRead) //numOfNumsToRead defaults to 0
+		{//read binary files from disk, interpreting them as type T1
+			static_assert(std::is_arithmetic_v<T1>, "readBin is only usable with aritmetic types");
 
 			std::ifstream binFile{ filename, std::ios::binary };
 			if (!binFile.is_open())
-				throw std::invalid_argument("fileIO::readFltBin: could not open file " + filename + " for reading");
+				throw std::invalid_argument("fileIO::readBin: could not open file " + filename + " for reading");
 
 			binFile.seekg(0, binFile.end);
-			size_t length{ (size_t)binFile.tellg() };
+			size_t flen{ (size_t)binFile.tellg() / sizeof(T1) };  //file length in number of numbers stored in file
 			binFile.seekg(0, binFile.beg);
-
-			if (length < numOfFltsToRead * sizeof(float))
+			
+			if (numOfNumsToRead == 0)
+				numOfNumsToRead = flen;
+			if (arrayToReadInto.size() != numOfNumsToRead) //resize array to be able to hold number of numbers being read
+				arrayToReadInto.resize(numOfNumsToRead);
+			if (flen < numOfNumsToRead * sizeof(T1))
 			{
 				binFile.close();
-				throw std::invalid_argument("fileIO::readFltBin: filesize of \"" + filename + "\" is smaller than specified number of floats to read");
+				throw std::invalid_argument("fileIO::readBin: filesize of \"" + filename + "\" is smaller than the number of numbers to read specified by the user");
 			}
-			if (length > numOfFltsToRead * sizeof(float))
-				std::cerr << "fileIO::readFltBin: warning: size of data read is less than the size of all data in file " << filename << ": continuing" << std::endl;
+			if (flen > numOfNumsToRead * sizeof(T1))
+				std::cerr << "fileIO::readBin: warning: size of data read is less than the size of all data in file " << filename << ": continuing" << std::endl;
 
-			binFile.read(reinterpret_cast<char*>(arrayToReadInto.data()), std::streamsize(numOfFltsToRead * sizeof(float)));
+			binFile.read(reinterpret_cast<char*>(arrayToReadInto.data()), std::streamsize(numOfNumsToRead * sizeof(T1)));
 			binFile.close();
 		}
 
-		DLLEXP void read2DCSV(vector<vector<float>>& array2DToReadInto, string filename, size_t numofentries, size_t numofcols, const char delim)
+		//These template instantiations are a required part of implementing template definitions in .cpp files (with forward decls in headers)
+		//see: https://isocpp.org/wiki/faq/templates#separate-template-fn-defn-from-decl
+		template DLLEXP void readBin<flPt_t>(fp1Dvec& arrayToReadInto, string filename, size_t numOfNumsToRead);
+		template DLLEXP void readBin<int>(vector<int>& arrayToReadInto, string filename, size_t numOfNumsToRead);
+
+		template <typename T1>
+		DLLEXP void writeBin(const vector<T1>& dataarray, string filename, size_t numelements, bool overwrite)//overwrite defaults to true
 		{
+			static_assert(std::is_arithmetic_v<T1>, "writeBin is only usable with aritmetic types");
+			
+			std::ofstream binfile{ filename, std::ios::binary | (overwrite ? (std::ios::trunc) : (std::ios::app)) };
+			if (!binfile.is_open())
+				throw std::invalid_argument("fileIO::writeBin: could not open file " + filename + " for writing");
+			if (dataarray.size() < numelements)
+			{
+				binfile.close();
+				throw std::invalid_argument("fileIO::writeBin: size of data vector is less than the number of numbers requested from it for filename " + filename);
+			}
+
+			binfile.write(reinterpret_cast<const char*>(dataarray.data()), std::streamsize(numelements * sizeof(T1)));
+			binfile.close();
+		}
+
+		template DLLEXP void writeBin<flPt_t>(const fp1Dvec&, string, size_t, bool);
+		template DLLEXP void writeBin<int>(const vector<int>&, string, size_t, bool);
+
+		
+		//CSV functions
+		template <typename T1>
+		DLLEXP void read2DCSV(vector<vector<T1>>& array2DToReadInto, string filename, size_t numofentries, size_t numofcols, const char delim)
+		{
+			static_assert(std::is_arithmetic_v<T1>, "read2DCSV is only usable with aritmetic types");
+			
 			std::ifstream csv{ filename };
 			if (!csv.is_open())
 				throw std::invalid_argument("fileIO::read2DCSV: could not open file " + filename + " for reading");
-			if (array2DToReadInto.size() < numofcols)
-				throw std::invalid_argument("fileIO::read2DCSV: vector outer vector is not big enough to contain the data being read from file " + filename);
-			if (array2DToReadInto.size() > numofcols)
-				std::cerr << "fileIO::read2DCSV: vector outer vector is bigger than numofcols, some data in the vector will remain unmodified" << std::endl;
+			if (array2DToReadInto.size() != numofcols)  //reshape vector to exactly contain all data
+				array2DToReadInto.resize(numofcols);
 			for (size_t col = 0; col < array2DToReadInto.size(); col++)
 			{
-				if (array2DToReadInto.at(col).size() < numofentries)
-					throw std::invalid_argument("fileIO::read2DCSV: vector inner vector is not big enough to contain the data being read from file " + filename);
-				if (array2DToReadInto.at(col).size() > numofentries)
-					std::cerr << "fileIO::read2DCSV: vector inner vector is bigger than numofentries, some data in the vector will remain unmodified" << std::endl;
+				if (array2DToReadInto.at(col).size() != numofentries)
+					array2DToReadInto.at(col).resize(numofentries);
 			}
 
 			try
@@ -100,48 +117,18 @@ namespace utils
 			csv.close();
 		}
 
-		DLLEXP void readTxtFile(string& readInto, string filename)
+		template <typename T1>
+		DLLEXP void write2DCSV(const vector<vector<T1>>& dataarray, string filename, size_t numofentries, size_t numofcols, const char delim, bool overwrite, int precision)//overwrite defaults to true, precision to 20
 		{
-			std::ifstream txt(filename);
-			if (!txt.is_open())
-			{
-				txt.close();
-				throw std::invalid_argument("fileIO::readTxtFile: could not open file " + filename + " for reading " + std::to_string(txt.is_open()));
-			}
-
-			std::stringstream buf;
-			buf << txt.rdbuf();
-			txt.close();
-
-			readInto = buf.str();
-		}
-
-
-		//write functions
-		DLLEXP void writeFltBin(const vector<float>& dataarray, string filename, size_t numelements, bool overwrite)//overwrite defaults to true
-		{
-			std::ofstream binfile{ filename, std::ios::binary | (overwrite ? (std::ios::trunc) : (std::ios::app)) };
-			if (!binfile.is_open())
-				throw std::invalid_argument("fileIO::writeFltBin: could not open file " + filename + " for writing");
-			if (dataarray.size() < numelements)
-			{
-				binfile.close();
-				throw std::invalid_argument("fileIO::writeFltBin: size of data vector is less than the number of floats requested from it for filename " + filename);
-			}
-
-			binfile.write(reinterpret_cast<const char*>(dataarray.data()), std::streamsize(numelements * sizeof(float)));
-			binfile.close();
-		}
-
-		DLLEXP void write2DCSV(const vector<vector<float>>& dataarray, string filename, size_t numofentries, size_t numofcols, const char delim, bool overwrite, int precision)//overwrite defaults to true, precision to 20
-		{
+			static_assert(std::is_arithmetic_v<T1>, "write2DCSV is only usable with aritmetic types");
+			
 			std::ofstream csv(filename, overwrite ? (std::ios::trunc) : (std::ios::app));
 			if (!csv.is_open())
 				throw std::invalid_argument("fileIO::write2DCSV: could not open file " + filename + " for writing");
 			if (dataarray.size() < numofcols)
 			{
 				csv.close();
-				throw std::invalid_argument("fileIO::write2DCSV: size of data vector is less than the floats requested from it for filename " + filename);
+				throw std::invalid_argument("fileIO::write2DCSV: size of data vector is less than the numbers requested from it for filename " + filename);
 			}
 
 			for (size_t iii = 0; iii < numofentries; iii++)
@@ -162,6 +149,26 @@ namespace utils
 			}
 
 			csv.close();
+		}
+
+		template DLLEXP void write2DCSV<flPt_t>(const fp2Dvec&, string, size_t, size_t, const char, bool, int);
+
+		
+		//txt file functions
+		DLLEXP void readTxtFile(string& readInto, string filename)
+		{
+			std::ifstream txt(filename);
+			if (!txt.is_open())
+			{
+				txt.close();
+				throw std::invalid_argument("fileIO::readTxtFile: could not open file " + filename + " for reading " + std::to_string(txt.is_open()));
+			}
+
+			std::stringstream buf;
+			buf << txt.rdbuf();
+			txt.close();
+
+			readInto = buf.str();
 		}
 
 		DLLEXP void writeTxtFile(string textToWrite, string filename, bool overwrite)//overwrite defaults to false

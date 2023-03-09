@@ -60,13 +60,13 @@ namespace utils
 			}
 		}
 
-		void CSV::add(vector<float> vec, string label)
+		void CSV::add(fp1Dvec vec, string label)
 		{
 			data_m.push_back(vec);
 			labels_m.push_back(label);
 		}
 
-		void CSV::add(vector<vector<float>> vecs, vector<string> labels)
+		void CSV::add(fp2Dvec vecs, strvec labels)
 		{
 			if (vecs.size() != labels.size())
 				throw invalid_argument("CSV::add: vecs.size() != labels.size()");
@@ -81,11 +81,11 @@ namespace utils
 				cout << "CSV::addspace: data_m is empty, cannot add zeroes array\n";
 				return;
 			}
-			data_m.push_back(vector<float>(data_m.at(0).size()));
+			data_m.push_back(fp1Dvec(data_m.at(0).size()));
 			labels_m.push_back("");
 		}
 
-		vector<vector<float>>& CSV::data()
+		fp2Dvec& CSV::data()
 		{
 			return data_m;
 		}
@@ -114,13 +114,13 @@ namespace utils
 			};
 
 			Type   type_m{ Type::energy };
-			float min_m { 0.0f };
-			float max_m { 0.0f };
-			float step_m{ 0.0f };
+			flPt_t min_m { 0.0f };
+			flPt_t max_m { 0.0f };
+			flPt_t step_m{ 0.0f };
 			int    bins_m{ 0 };
 			bool   optn_m{ false }; //used to set logE || midBin options
 
-			Range(Type type, float min, float max, float step, int bins, bool option) :
+			Range(Type type, flPt_t min, flPt_t max, flPt_t step, int bins, bool option) :
 				type_m{ type }, min_m{ min }, max_m{ max }, step_m{ step }, bins_m{ bins }, optn_m{ option }
 			{
 
@@ -137,9 +137,9 @@ namespace utils
 				ostream out(&sb);
 
 				out.write(reinterpret_cast<const char*>(&type_m), sizeof(Type));
-				out.write(reinterpret_cast<const char*>(&min_m), sizeof(float));
-				out.write(reinterpret_cast<const char*>(&max_m), sizeof(float));
-				out.write(reinterpret_cast<const char*>(&step_m), sizeof(float));
+				out.write(reinterpret_cast<const char*>(&min_m), sizeof(flPt_t));
+				out.write(reinterpret_cast<const char*>(&max_m), sizeof(flPt_t));
+				out.write(reinterpret_cast<const char*>(&step_m), sizeof(flPt_t));
 				out.write(reinterpret_cast<const char*>(&bins_m), sizeof(int));
 				out.write(reinterpret_cast<const char*>(&optn_m), sizeof(bool));
 
@@ -156,9 +156,9 @@ namespace utils
 				};
 
 				type_m = *(reinterpret_cast<Type*>(readVal(sizeof(Type)).data()));
-				min_m = *(reinterpret_cast<float*>(readVal(sizeof(float)).data()));
-				max_m = *(reinterpret_cast<float*>(readVal(sizeof(float)).data()));
-				step_m = *(reinterpret_cast<float*>(readVal(sizeof(float)).data()));
+				min_m = *(reinterpret_cast<flPt_t*>(readVal(sizeof(flPt_t)).data()));
+				max_m = *(reinterpret_cast<flPt_t*>(readVal(sizeof(flPt_t)).data()));
+				step_m = *(reinterpret_cast<flPt_t*>(readVal(sizeof(flPt_t)).data()));
 				bins_m = *(reinterpret_cast<int*>(readVal(sizeof(int)).data()));
 				optn_m = *(reinterpret_cast<bool*>(readVal(sizeof(bool)).data()));
 			}
@@ -166,7 +166,7 @@ namespace utils
 
 
 		// ======== ParticleDistribution::Public ======== //
-		ParticleDistribution::ParticleDistribution(string saveFolder, vector<string> attrNames, string particleName, float mass, vector<float> padvals, bool write) :
+		ParticleDistribution::ParticleDistribution(string saveFolder, strvec attrNames, string particleName, kg mass, fp1Dvec padvals, bool write) :
 			saveFolder_m{ saveFolder }, attrNames_m{ attrNames }, particleName_m{ particleName }, write_m{ write }, mass_m{ mass }, padvals_m{ padvals }
 		{//ctor(default) for shorthand
 			if (attrNames.size() == 0) throw invalid_argument("ParticleDistribution::ctor(default): invalid attributes - none specified");
@@ -229,7 +229,7 @@ namespace utils
 			return particleName_m;
 		}
 		
-		float ParticleDistribution::mass() const
+		kg ParticleDistribution::mass() const
 		{
 			return mass_m;
 		}
@@ -240,7 +240,7 @@ namespace utils
 		  //                                            E_start ^       ^ E_end
 
 			if (energyBins == 0) throw invalid_argument("ParticleDistribution::addPitchRange: pitchBins is zero");
-			float E_binsize{ (E_end - E_start) / (float)(energyBins - 1) }; //minus 1 because E bins are end point inclusive
+			eV E_binsize{ (E_end - E_start) / (eV)(energyBins - 1) }; //minus 1 because E bins are end point inclusive
 			ranges_m.push_back(std::move(Range(Range::Type::energy, E_start, E_end, E_binsize, energyBins, logE)));
 		}
 
@@ -250,18 +250,18 @@ namespace utils
 		  // PA_start ^           ^ PA_end      PA_start ^           ^ PA_end
 			
 			if (pitchBins == 0) throw invalid_argument("ParticleDistribution::addPitchRange: pitchBins is zero");
-			float PA_binsize{ (PA_end - PA_start) / (float)pitchBins }; //no minus 1 because start and end are bin edges - not end point inclusive
+			degrees PA_binsize{ (PA_end - PA_start) / (degrees)pitchBins }; //no minus 1 because start and end are bin edges - not end point inclusive
 			ranges_m.push_back(std::move(Range(Range::Type::pitchAngle, PA_start, PA_end, PA_binsize, pitchBins, midBin)));
 		}
 
-		vector<vector<float>> ParticleDistribution::generate(meters s_ion, meters s_mag) const
+		fp2Dvec ParticleDistribution::generate(meters s_ion, meters s_mag) const
 		{
 			vector<meters> s({ s_ion, s_mag });
 
 			return generate(s);
 		}
 
-		vector<vector<float>> ParticleDistribution::generate(vector<meters>& s) const
+		fp2Dvec ParticleDistribution::generate(vector<meters>& s) const
 		{
 			EPA epa;
 			
@@ -273,7 +273,7 @@ namespace utils
 					if (range.type_m == Range::Type::energy)
 					{
 						//defaults to creating mid bin values (x's ---->) This: |-x-|-x-|   Not this: x---x---|
-						vector<float> E_add{ generateSpacedValues(range.min_m, range.max_m, range.bins_m, range.optn_m, true) };
+						fp1Dvec E_add{ generateSpacedValues(range.min_m, range.max_m, range.bins_m, range.optn_m, true) };
 						for (size_t eng = 0; eng < E_add.size(); eng++) //adds to whatever values are there now
 							tmp.energies.push_back(E_add.at(eng));
 					}
@@ -291,7 +291,7 @@ namespace utils
 						//defaults to linear (non-log) scale for bins - This: x  x  x  x    Not this: xxx x x  x    x        x
 						//if midBin is specified, range becomes end point inclusive : x-----x-----|  vs  |--x--|--x--|
 						//                                                      start=^,end=^,not=^   start=^,end=^
-						vector<float> PA_add{ generateSpacedValues(PA_start, PA_end, range.bins_m, false, range.optn_m) };
+						fp1Dvec PA_add{ generateSpacedValues(PA_start, PA_end, range.bins_m, false, range.optn_m) };
 						for (size_t eng = 0; eng < PA_add.size(); eng++)
 							tmp.pitches.push_back(PA_add.at(eng));
 					}
@@ -323,10 +323,10 @@ namespace utils
 					s.push_back(((pitch <= 90.0f) ? s_mag : s_ion));
 			}
 			
-			vector<vector<float>> ret(attrNames_m.size(), vector<float>(epa.energies.size()));
+			fp2Dvec ret(attrNames_m.size(), fp1Dvec(epa.energies.size()));
 			for (size_t otherAttr = 0; otherAttr < ret.size(); otherAttr++)
 				if (padvals_m.at(otherAttr) != 0.0f) //pad vectors with non-zero pad values
-					ret.at(otherAttr) = vector<float>(ret.at(0).size(), padvals_m.at(otherAttr));
+					ret.at(otherAttr) = fp1Dvec(ret.at(0).size(), padvals_m.at(otherAttr));
 			
 			utils::numerical::EPitchTov2D(epa.energies, epa.pitches, mass_m, ret.at(0), ret.at(1));
 
@@ -334,8 +334,8 @@ namespace utils
 			{
 				if (attrNames_m.at(attr) == "s")
 				{
-					vector<float>sFloat(s.begin(), s.end());
-					ret.at(attr) = sFloat;
+					fp1Dvec sflPt_t(s.begin(), s.end());
+					ret.at(attr) = sflPt_t;
 					return ret;
 				}
 			}
@@ -352,12 +352,12 @@ namespace utils
 
 		void ParticleDistribution::write(vector<meters>& s) const
 		{
-			vector<vector<float>> data{ generate(s) };
+			fp2Dvec data{ generate(s) };
 
 			try
 			{
 				for (size_t attr = 0; attr < data.size(); attr++)
-					fileIO::writeFltBin(data.at(attr), saveFolder_m + "/" + particleName_m + "_" + attrNames_m.at(attr) + ".bin", data.at(0).size());
+					fileIO::writeBin(data.at(attr), saveFolder_m + "/" + particleName_m + "_" + attrNames_m.at(attr) + ".bin", data.at(0).size());
 			}
 			catch (exception& e)
 			{
@@ -383,14 +383,18 @@ namespace utils
 			// ======== write data to file ======== //
 			writeStrBuf(serializeStringVector(attrNames_m));
 			writeStrBuf(serializeString(particleName_m));
-			out.write(reinterpret_cast<const char*>(&mass_m), sizeof(float));
+			out.write(reinterpret_cast<const char*>(&mass_m), sizeof(kg));
 
 			size_t rangesSize{ ranges_m.size() };
 			out.write(reinterpret_cast<char*>(&rangesSize), sizeof(size_t));
 			for (const auto& range : ranges_m)
 				writeStrBuf(range.serialize());
 
-			writeStrBuf(serializeFloatVector(padvals_m));
+			vector<double> tmp;
+			for (size_t i = 0; i < padvals_m.size(); i++)
+				tmp.push_back((double)padvals_m.at(i));
+			
+			writeStrBuf(serializeDoubleVector(tmp));
 
 			out.close();
 		}
@@ -405,15 +409,18 @@ namespace utils
 			attrNames_m = deserializeStringVector(in);
 			particleName_m = deserializeString(in);
 
-			vector<char> masschr(sizeof(float), '\0'); // read mass float value
-			in.read(masschr.data(), sizeof(float));
-			mass_m = *(reinterpret_cast<float*>(masschr.data()));
+			vector<char> masschr(sizeof(flPt_t), '\0'); // read mass flPt_t value
+			in.read(masschr.data(), sizeof(flPt_t));
+			mass_m = *(reinterpret_cast<kg*>(masschr.data()));
 
 			size_t rangesSize{ readSizetLength(in) };
 			for (size_t range = 0; range < rangesSize; range++)
 				ranges_m.push_back(std::move(Range(in)));
 
-			padvals_m = deserializeFloatVector(in);
+			vector<double> tmp = deserializeDoubleVector(in);
+			padvals_m.resize(tmp.size());
+			for (size_t i = 0; i < tmp.size(); i++)
+				padvals_m.at(i) = (flPt_t)tmp.at(i);
 
 			in.close();
 		}

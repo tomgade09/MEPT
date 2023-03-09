@@ -79,7 +79,11 @@ void Log::streamCheck()
 			{
 				size_t tmplen{ stream.str().length() };
 
-				do std::this_thread::sleep_for(microseconds(10));
+				do
+				{
+					tmplen = stream.str().length();
+					std::this_thread::sleep_for(microseconds(10));
+				}
 				while (tmplen != stream.str().length()); //block until cerr is not being written to anymore
 
 				entries_m.push_back(Entry(steady_clock::now(), stream.str(), true, error));

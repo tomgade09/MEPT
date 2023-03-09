@@ -6,16 +6,18 @@
 class EField final //not meant to be inherited from
 {
 private:
-	EField* this_d{ nullptr }; //pointer to EField instance on GPU
-
 	//the below vector references need these dev exclusion blocks or there
 	//is a cudaIllegalMemoryAccess error that's really tricky to track down
-#ifndef __CUDA_ARCH__ //host code
+	#ifndef __CUDA_ARCH__ //host code
+	vector<EField*> this_d; //pointer to EField instance on GPU
 	vector<unique_ptr<EModel>> emodels_m; //EModels pointers on host
-#endif /* !__CUDA_ARCH__ */
+	vector<EModel**> emodels_d; //host: holds ptr to on GPU array, used to increase size
+	#else
+	EField* this_d{ nullptr };
+	//GPU container of EModels variables
+	EModel** emodels_d{ nullptr }; //device: holds ptr to on GPU array, used to access elements
+	#endif /* !__CUDA_ARCH__ */
 
-//GPU container of EModels variables
-	EModel** emodels_d{ nullptr }; //host: holds ptr to on GPU array, used to increase size, device: holds ptr to on GPU array, used to access elements
 	int capacity_d{ 5 };           //denotes size and capacity of E element array on device
 	int size_d{ 0 };
 	//End container variables
@@ -45,7 +47,7 @@ public:
 	__device__          void emodelArray_d(EModel** emodelPtrArray);
 	
 	__host__ __device__ Vperm   getEFieldAtS(const meters s, const seconds t) const;
-	__host__            EField* this_dev() const;
+	__host__            EField* this_dev(int GPUind) const;
 	
 	__host__            EModel* emodel(int ind) const;
 	//__host__            string getElementNames() const;

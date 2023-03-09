@@ -19,16 +19,16 @@ using std::logic_error;
 using std::runtime_error;
 using std::invalid_argument;
 
-using utils::fileIO::readFltBin;
-using utils::fileIO::writeFltBin;
+using utils::fileIO::readBin;
+using utils::fileIO::writeBin;
 using namespace utils::fileIO::serialize;
 
-Particles::Particles(string name, vector<string> attributeNames, float mass, float charge, size_t numParts,
-	size_t numGPUs, vector<size_t> particleCountPerGPU) : name_m{ name }, attributeNames_m{ attributeNames }, mass_m{ mass },
-	charge_m{ charge }, numberOfParticles_m{ numParts }, numGPUs_m{ numGPUs }, particleCountPerGPU_m{ particleCountPerGPU }
+
+Particles::Particles(string name, const strvec& attributeNames, kg mass, coulomb charge, size_t numParts) :
+	name_m{ name }, attributeNames_m{ attributeNames }, mass_m{ mass },	charge_m{ charge },	numberOfParticles_m{ numParts }
 {
-	origData_m = vector<vector<float>>(attributeNames.size(), vector<float>(numParts));
-	currData_m = vector<vector<float>>(attributeNames.size(), vector<float>(numParts));
+	origData_m = fp2Dvec(attributeNames.size(), fp1Dvec(numParts));
+	currData_m = fp2Dvec(attributeNames.size(), fp1Dvec(numParts));
 	initializeGPU();
 }
 
@@ -36,9 +36,13 @@ Particles::Particles(ifstream& in)
 { //for loading serialzed class
 	deserialize(in);
 
-	origData_m = vector<vector<float>>(attributeNames_m.size(), vector<float>(numberOfParticles_m));
-	currData_m = vector<vector<float>>(attributeNames_m.size(), vector<float>(numberOfParticles_m));
+	loadDataFromDisk("./bins/particles_init", true);  //load data from disk in the standard folder
+	loadDataFromDisk("./bins/particles_final", false);
+
+	origData_m = fp2Dvec(attributeNames_m.size(), fp1Dvec(numberOfParticles_m));
+	currData_m = fp2Dvec(attributeNames_m.size(), fp1Dvec(numberOfParticles_m));
 	initializeGPU();
+	copyDataToGPU(true);
 }
 
 Particles::~Particles()
@@ -48,35 +52,40 @@ Particles::~Particles()
 
 // ================ Particles - protected ================ //
 void Particles::initializeGPU()
-{	
+{
+	numGPUs_m = utils::GPU::getDeviceCount();
+	particleCountPerGPU_m = utils::GPU::getSplitSize(numberOfParticles_m, BLOCKSIZE);
+
 	for (size_t i = 0; i < numGPUs_m; i++)
 	{
 		currData1D_d.push_back(nullptr);
 		currData2D_d.push_back(nullptr);
+
 		utils::GPU::setup2DArray(&currData1D_d.at(i), &currData2D_d.at(i), attributeNames_m.size() + 2,
 			particleCountPerGPU_m.at(i), i);
+
 		clog << "Particles::initializeGPU() : setup2DArray GPU num " + to_string(i) +
 			    ": num particles " + to_string(particleCountPerGPU_m.at(i));
 	}
 	initializedGPU_m = true;
 }
 
-void Particles::copyDataToGPU(bool origToGPU)
+void Particles::copyDataToGPU(bool currToGPU)
 {
 	if (!initializedGPU_m)
 		throw logic_error("Particles::copyDataToGPU: GPU memory has not been initialized yet for particle " + name_m);
 	if (!initDataLoaded_m)
 		throw logic_error("Particles::copyDataToGPU: data not loaded from disk with Particles::loadDataFromDisk or generated with Particles::generateRandomParticles " + name_m);
 
-	const vector<vector<float>>& orig{ origData_m };
-	const vector<vector<float>>& curr{ currData_m };
+	const fp2Dvec& orig{ origData_m };
+	const fp2Dvec& curr{ currData_m };
 	
-	auto getsubvec = [](vector<vector<float>> vec, size_t offset, size_t end)
+	auto getsubvec = [](const fp2Dvec& vec, size_t offset, size_t end)
 	{
-		vector<vector<float>> subvec(vec.size());
+		fp2Dvec subvec(vec.size());
 		for (size_t attr = 0; attr < vec.size(); attr++)
 			subvec.at(attr) =
-				vector<float>(vec.at(attr).begin() + offset, vec.at(attr).begin() + end);
+				fp1Dvec(vec.at(attr).begin() + offset, vec.at(attr).begin() + end);
 		return subvec;
 	};
 	
@@ -86,14 +95,12 @@ void Particles::copyDataToGPU(bool origToGPU)
 		size_t end{ offset + particleCountPerGPU_m.at(dev) };
 		if (end > numberOfParticles_m) end = numberOfParticles_m;
 
-		vector<vector<float>> subvec;
+		fp2Dvec subvec;
 		
-		if (origToGPU)
-		{
-			subvec = getsubvec(orig, offset, end);
-			utils::GPU::copy2DArray(subvec, &currData1D_d.at(dev), true, dev); //sending to orig(host) -> data(GPU)
-		}
-		else
+		subvec = getsubvec(orig, offset, end);
+		utils::GPU::copy2DArray(subvec, &currData1D_d.at(dev), true, dev); //sending to orig(host) -> data(GPU)
+		
+		if (currToGPU)
 		{
 			subvec = getsubvec(curr, offset, end);
 			utils::GPU::copy2DArray(subvec, &currData1D_d.at(dev), true, dev); //sending to curr(host) -> data(GPU)
@@ -117,7 +124,7 @@ void Particles::copyDataToHost()
 		size_t end{ offset + particleCountPerGPU_m.at(dev) };
 		if (end > numberOfParticles_m) end = numberOfParticles_m;
 		
-		vector<vector<float>> subvec(currData_m.size(), vector<float>(end - offset));
+		fp2Dvec subvec(currData_m.size(), fp1Dvec(end - offset));
 
 		utils::GPU::copy2DArray(subvec, &currData1D_d.at(dev), false, dev); //coming back data(GPU) -> curr(host)
 		for (size_t i = 0; i < subvec.size(); i++)
@@ -150,12 +157,12 @@ void Particles::freeGPUMemory()
 
 // ================ Particles - public ================ //
 
-vector<vector<float>>& Particles::__data(bool orig)
+fp2Dvec& Particles::__data(bool orig)
 { //returns a non-const version of data
 	return ((orig) ? origData_m : currData_m);
 }
 
-const vector<vector<float>>& Particles::data(bool orig) const
+const fp2Dvec& Particles::data(bool orig) const
 { //returns a const version of data
 	return ((orig) ? origData_m : currData_m);
 }
@@ -170,12 +177,12 @@ string Particles::name() const
 	return name_m;
 }
 
-float Particles::mass() const
+kg Particles::mass() const
 {
 	return mass_m;
 }
 
-float Particles::charge() const
+coulomb Particles::charge() const
 {
 	return charge_m;
 }
@@ -205,8 +212,7 @@ bool Particles::getInitDataLoaded() const
 	return initDataLoaded_m;
 }
 
-//float** Particles::getCurrDataGPUPtr() const
-float** Particles::getCurrDataGPUPtr(size_t GPUind) const
+flPt_t** Particles::getCurrDataGPUPtr(size_t GPUind) const
 {
 	return currData2D_d.at(GPUind);
 }
@@ -228,7 +234,7 @@ string Particles::getAttrNameByInd(size_t searchIndx) const
 	return attributeNames_m.at(searchIndx);
 }
 
-void Particles::setParticlesSource_s(float s_ion, float s_mag)
+void Particles::setParticlesSource_s(meters s_ion, meters s_mag)
 {
 	cout << "Particles::setParticlesSource_s: This function is being depreciated and will be removed in a future release.\n";
 	//need to create a ParticleDistribution and load into Particles::origData_m before I get rid of this
@@ -293,7 +299,7 @@ void Particles::loadDistFromDisk(string folder, string distName, meters s_ion, m
 	copyDataToGPU();
 }
 
-void Particles::loadDataFromMem(vector<vector<float>> data, bool orig) //orig defaults to true
+void Particles::loadDataFromMem(const fp2Dvec& data, bool orig) //orig defaults to true
 {
 	((orig) ? origData_m = data : currData_m = data);
 	numberOfParticles_m = ((orig) ? (int)origData_m.at(0).size() : (int)currData_m.at(0).size());
@@ -306,8 +312,8 @@ void Particles::loadDataFromMem(vector<vector<float>> data, bool orig) //orig de
 void Particles::loadDataFromDisk(string folder, bool orig) //orig defaults to true
 {
 	for (size_t attrs = 0; attrs < attributeNames_m.size(); attrs++)
-		FILE_RDWR_EXCEP_CHECK(readFltBin((orig ? origData_m.at(attrs) : currData_m.at(attrs)), folder + "/" + name_m + "_" + attributeNames_m.at(attrs) + ".bin", numberOfParticles_m));
-
+		FILE_RDWR_EXCEP_CHECK(readBin((orig ? origData_m.at(attrs) : currData_m.at(attrs)), folder + "/" + name_m + "_" + attributeNames_m.at(attrs) + ".bin", numberOfParticles_m));
+	
 	if (orig) initDataLoaded_m = true; //copyDataToGPU uses this flag to ensure data is present in origData_m
 	if (orig) copyDataToGPU();
 }
@@ -315,7 +321,7 @@ void Particles::loadDataFromDisk(string folder, bool orig) //orig defaults to tr
 void Particles::saveDataToDisk(string folder, bool orig) const
 {
 	for (size_t attrs = 0; attrs < attributeNames_m.size(); attrs++)
-		FILE_RDWR_EXCEP_CHECK(writeFltBin((orig ? origData_m.at(attrs) : currData_m.at(attrs)), folder + "/" + name_m + "_" + attributeNames_m.at(attrs) + ".bin", numberOfParticles_m));
+		FILE_RDWR_EXCEP_CHECK(writeBin((orig ? origData_m.at(attrs) : currData_m.at(attrs)), folder + "/" + name_m + "_" + attributeNames_m.at(attrs) + ".bin", numberOfParticles_m));
 }
 
 void Particles::serialize(ofstream& out) const
@@ -329,11 +335,15 @@ void Particles::serialize(ofstream& out) const
 	writeStrBuf(serializeString(name_m));
 	writeStrBuf(serializeStringVector(attributeNames_m));
 	
-	out.write(reinterpret_cast<const char*>(&initDataLoaded_m), sizeof(bool));
-	out.write(reinterpret_cast<const char*>(&initializedGPU_m), sizeof(bool));
+	auto writeFPBuf = [&](const flPt_t fp)
+	{   //casts to double so that SP MEPT doesn't break when loading a previously saved DP save file (and vice versa)
+		double tmp{ static_cast<double>(fp) };  //cast to double precision FP
+		out.write(reinterpret_cast<const char*>(&tmp), sizeof(double));
+	};
+
 	out.write(reinterpret_cast<const char*>(&numberOfParticles_m), sizeof(size_t));
-	out.write(reinterpret_cast<const char*>(&mass_m), sizeof(float));
-	out.write(reinterpret_cast<const char*>(&charge_m), sizeof(float));
+	writeFPBuf(mass_m);
+	writeFPBuf(charge_m);
 }
 
 void Particles::deserialize(ifstream& in) //protected function
@@ -341,9 +351,14 @@ void Particles::deserialize(ifstream& in) //protected function
 	name_m = deserializeString(in);
 	attributeNames_m = deserializeStringVector(in);
 
-	in.read(reinterpret_cast<char*>(&initDataLoaded_m), sizeof(bool));
-	in.read(reinterpret_cast<char*>(&initializedGPU_m), sizeof(bool));
+	auto readFPBuf = [&]()
+	{   //casts to double so that SP MEPT doesn't break when loading a previously saved DP save file (and vice versa)
+		double tmp{ 0.0 };  //read in double precision FP
+		in.read(reinterpret_cast<char*>(&tmp), sizeof(double));
+		return tmp;
+	};
+
 	in.read(reinterpret_cast<char*>(&numberOfParticles_m), sizeof(size_t));
-	in.read(reinterpret_cast<char*>(&mass_m), sizeof(float));
-	in.read(reinterpret_cast<char*>(&charge_m), sizeof(float));
+	mass_m = readFPBuf();
+	charge_m = readFPBuf();
 }

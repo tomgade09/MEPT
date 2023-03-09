@@ -81,6 +81,15 @@
     <ClCompile Include="..\src\main.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="..\src\API\SimulationAPI.cpp">
+      <Filter>Source Files\API</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\API\utilsAPI.cpp">
+      <Filter>Source Files\API</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\API\LogAPI.cpp">
+      <Filter>Source Files\API</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\include\physicalconstants.h">
@@ -111,9 +120,6 @@
       <Filter>Header Files\BField</Filter>
     </ClInclude>
     <ClInclude Include="..\include\utils\numerical.h">
-      <Filter>Header Files\utils</Filter>
-    </ClInclude>
-    <ClInclude Include="..\include\utils\random.h">
       <Filter>Header Files\utils</Filter>
     </ClInclude>
     <ClInclude Include="..\include\ErrorHandling\cudaDeviceMacros.h">
@@ -169,6 +175,15 @@
     </ClInclude>
     <ClInclude Include="..\include\Particles\Particles.h">
       <Filter>Header Files\Particles</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\API\SimulationAPI.h">
+      <Filter>Header Files\API</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\API\utilsAPI.h">
+      <Filter>Header Files\API</Filter>
+    </ClInclude>
+    <ClInclude Include="..\include\API\LogAPI.h">
+      <Filter>Header Files\API</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -305,6 +320,12 @@
     </Filter>
     <Filter Include="Other Files">
       <UniqueIdentifier>{db16776e-a909-4b4c-a043-5e3983df1180}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\API">
+      <UniqueIdentifier>{9158f52c-6df3-458f-ad1c-98caf8f12382}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\API">
+      <UniqueIdentifier>{cdcd98bf-748d-4cb3-8c18-fa2df8a1908d}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>

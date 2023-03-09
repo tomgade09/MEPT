@@ -20,8 +20,8 @@ protected:
 	#endif /* !__CUDA_ARCH__ */
 
 	//on device variables
-	float* altitude_d{ nullptr }; //serves as device-side C-style vector equivalent, and on host, pointer to this on dev
-	float* magnitude_d{ nullptr };
+	meters* altitude_d{ nullptr }; //serves as device-side C-style vector equivalent, and on host, pointer to this on dev
+	tesla*  magnitude_d{ nullptr };
 	
 	meters  simMin_m{ 0.0f };
 	meters  simMax_m{ 0.0f };
@@ -44,16 +44,16 @@ public:
 	__host__            degrees ILAT() const;
 
 	__host__ __device__ tesla   getBFieldAtS(const meters s, const seconds t) const override;
-	__host__ __device__ float  getGradBAtS(const meters s, const seconds t) const override;
+	__host__ __device__ flPt_t  getGradBAtS(const meters s, const seconds t) const override;
 	__host__ __device__ meters  getSAtAlt(const meters alt_fromRe) const override;
 
-    __device__          void    setAltArray(float* altArray);
-	__device__          void    setMagArray(float* magArray);
+    __device__          void    setAltArray(meters* altArray);
+	__device__          void    setMagArray(tesla*  magArray);
 
 	__host__            ratio   getErrTol() const;
 	__host__            meters  getds()     const;
 
-	__host__            vector<float> getAllAttributes() const override;
+	__host__            vector<flPt_t> getAllAttributes() const override;
 	__host__            void           serialize(ofstream& out) const override;
 };
 

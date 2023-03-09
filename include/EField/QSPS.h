@@ -9,16 +9,19 @@ class QSPS : public EModel
 {
 protected:
 	#ifndef __CUDA_ARCH__ //host code
-	vector<meters> altMin_m;
-	vector<meters> altMax_m;
-	vector<Vperm> magnitude_m;
+	vector<meters>  altMin_m;
+	vector<meters>  altMax_m;
+	vector<Vperm>   magnitude_m;
+	vector<meters*> altMin_d;
+	vector<meters*> altMax_d;
+	vector<Vperm*>  magnitude_d;
+    #else
+	meters* altMin_d; //on host this stores the pointer to the data on GPU, on GPU ditto
+	meters* altMax_d;
+	Vperm* magnitude_d;
 	#endif /* !__CUDA_ARCH__ */
 	
 	int numRegions_m{ 0 };
-
-	meters* altMin_d; //on host this stores the pointer to the data on GPU, on GPU ditto
-	meters* altMax_d;
-	Vperm*  magnitude_d;
 
 	bool useGPU_m{ true };
 
@@ -38,7 +41,7 @@ public:
 	__host__ const vector<meters>& altMax() const;
 	__host__ const vector<Vperm>&  magnitude() const;
 	
-	__host__ vector<float> getAllAttributes() const override;
+	__host__ vector<flPt_t> getAllAttributes() const override;
 	__host__ void serialize(ofstream& out) const override;
 };
 

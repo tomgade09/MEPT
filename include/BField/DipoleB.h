@@ -36,14 +36,14 @@ public:
 
 	__host__            degrees ILAT()  const;
 
-	__host__ __device__ tesla   getBFieldAtS(const meters s, const seconds t) const override;
-	__host__ __device__ float  getGradBAtS (const meters s, const seconds t) const override;
-	__host__ __device__ meters  getSAtAlt   (const meters alt_fromRe) const override;
+	__host__ __device__ tesla  getBFieldAtS(const meters s, const seconds t) const override;
+	__host__ __device__ flPt_t getGradBAtS (const meters s, const seconds t) const override;
+	__host__ __device__ meters getSAtAlt   (const meters alt_fromRe) const override;
 
 	__host__            ratio  getErrTol() const;
 	__host__            meters getds()     const;
 
-	__host__            vector<float> getAllAttributes() const override;
+	__host__            vector<flPt_t> getAllAttributes() const override;
 	__host__            void serialize(ofstream& out) const override;
 };
 

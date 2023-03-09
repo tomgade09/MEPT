@@ -12,23 +12,39 @@ using std::vector;
 using std::string;
 using std::ifstream;
 using std::ofstream;
+using std::shared_ptr;
 
-#define STRVEC vector<string>
-#define FLT2DV vector<vector<float>>
-#define FLT3DV vector<vector<vector<float>>>
+template <typename T1>
+struct SatData
+{
+	static constexpr int size{ 4 }; //number of elements in this struct
+	
+	T1 vpara;
+	T1 mu;
+	T1 s;
+	T1 t_detect;
+
+	SatData() = default;
+	SatData(const T1& vpara_i, const T1& mu_i, const T1& s_i, const T1& t_i);
+
+	T1& at(size_t loc);
+	const T1& __at(size_t loc) const; //the const version, for API access
+};
+
+typedef SatData<flPt_t*>        SatDataPtrs;
+typedef SatData<vector<flPt_t>> SatDataVecs;
 
 struct Sat_d
 {
-	float** capture_d{ nullptr };
-	float   altitude{ 0.0f };
-	bool    upward{ false };
+	SatDataPtrs capture_d;
+	meters      altitude;
+	bool        upward;
 };
 
 class Satellite
 {
 protected:
 	string name_m;
-	STRVEC attributeNames_m;
 	
 	meters altitude_m{ 0.0f };
 	bool   upwardFacing_m{ false };
@@ -38,20 +54,19 @@ protected:
 	size_t numGPUs_m;
 	vector<size_t> particleCountPerGPU_m;
 	
-	FLT2DV  data_m; //[attribute][particle]
-	vector<FLT2DV>	data_GPU_m;
-	vector<float*>  satCaptrData1D_d; //flattened satellite capture data on GPU
-	vector<float**> satCaptrData2D_d; //2D satellite capture data on GPU
-	vector<float**> particleData2D_d;
+	SatDataVecs          data_m;         //overall data
+	const strvec         names_m{ "vpara", "vperp", "s", "time" }; //data names on GPU
+	vector<flPt_t*>      gpuMemRegion_d; //flattened satellite capture data on GPU
+	vector<SatDataPtrs>  gpuDataPtrs_d;  //pointers to data arrays on GPU, stored as struct of arrays (SOA)
+										 //first pointer (vpara) is also the pointer for the entire GPU mem space
 
 	void   initializeGPU();
 	void   freeGPUMemory();
 	void   deserialize(ifstream& in);
-	size_t getAttrIndByName(string name);
 
 public:
-	Satellite(string name, STRVEC attributeNames, meters altitude, bool upwardFacing, size_t numberOfParticles, const std::shared_ptr<Particles>& particle, size_t numGPUs, vector<size_t> particleCountPerGPU_m);
-	Satellite(ifstream& in, const std::shared_ptr<Particles> &particle, size_t numGPUs, vector<size_t> particleCountPerGPU);
+	Satellite(string& name, meters altitude, bool upwardFacing, size_t numberOfParticles);
+	Satellite(ifstream& in);
 	~Satellite();
 	Satellite(const Satellite&) = delete;
 	Satellite& operator=(const Satellite&) = delete;
@@ -60,27 +75,22 @@ public:
 	string        name() const;
 	meters        altitude() const;
 	bool	      upward() const;
-	FLT2DV&       __data();
-	const FLT2DV& data() const;
-	float**       get2DDataGPUPtr(int GPUind) const;
-	float*        get1DDataGPUPtr(int GPUind) const;
+	SatDataVecs&       __data();
+	const SatDataVecs& data() const;
 	size_t        getNumberOfAttributes() const;
 	size_t        getNumberOfParticles()  const;
+	size_t		  getNumParticlesPerGPU(int GPUind) const;
 	Sat_d         getSat_d(int GPUind) const;
-
+	SatDataPtrs   getPtrs_d(int GPUind) const;
+	
 	//Other functions
-	//void iterateDetector(float simtime, float dt, int blockSize, int GPUind); //increment time, track overall sim time, or take an argument??
-	void iterateDetectorCPU(const FLT2DV& particleData, seconds simtime, seconds dt);
+	void iterateDetectorCPU(const fp2Dvec& particleData, seconds simtime, seconds dt); //need to remove as well
 	void copyDataToHost(); //some sort of sim time check to verify I have iterated for the current sim time??
 	void saveDataToDisk(string folder);
 	void loadDataFromDisk(string folder);
 
-	FLT2DV removeZerosData();
+	SatDataVecs removeZerosData(vector<int>& indices);
 	void serialize(ofstream& out) const;
 };
-
-#undef STRVEC
-#undef FLT2DV
-#undef FLT3DV
 
 #endif

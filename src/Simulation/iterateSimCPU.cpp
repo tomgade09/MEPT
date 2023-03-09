@@ -25,27 +25,29 @@ using std::to_string;
 //forward decls
 namespace physics
 {
-	void vperpMuConvert(const float vpara, float* vperpOrMu, const float s, const float t_convert, BModel* BModel, const float mass, const bool vperpToMu);
-	void iterateParticle(float* vpara, float* mu, float* s, float* t_incident, float* t_escape, BModel* BModel, EField* efield, const float simtime, const float dt, const float mass, const float charge, const float simmin, const float simmax);
+	void vperpMuConvert(const mpers vpara, flPt_t* vperpOrMu, const meters s, const seconds t_convert, BModel* BModel, const kg mass, const bool vperpToMu);
+	void iterateParticle(mpers* vpara, flPt_t* mu, meters* s, seconds* t_incident, seconds* t_escape, BModel* BModel, EField* efield, const seconds simtime, const seconds dt, const kg mass, const coulomb charge, const meters simmin, const meters simmax);
 }
 
+
+// For the time being, CPU execution doesn't make any sense when CUDA is required to compile MEPT anyway.  It's assumed an NVIDIA GPU is present on the system due to the CUDA lib requirement.
 void Simulation::__iterateSimCPU(size_t numberOfIterations, size_t checkDoneEvery)
 {
-	printSimAttributes(numberOfIterations, checkDoneEvery);
+	/*printSimAttributes(numberOfIterations, checkDoneEvery);
 
 	using namespace physics;
 	for (auto part = particles_m.begin(); part < particles_m.end(); part++)
 	{
 		(*part)->loadDataFromMem((*part)->data(true), false); //copies orig data to curr - normally this happens from CPU->GPU->CPU, but we aren't using the GPU here
 
-		vector<vector<float>>& data = (*part)->__data(false);
+		fp2Dvec& data = (*part)->__data(false);
 		
 		omp_set_num_threads(std::thread::hardware_concurrency());
 
 		#pragma omp parallel for
 		for (int ind = 0; ind < static_cast<int>((*part)->getNumberOfParticles()); ind++)
 		{//convert vperp to mu in Particles memory
-			vperpMuConvert(data.at(0).at(ind), &data.at(1).at(ind), data.at(2).at(ind), data.at(4).at(ind), BFieldModel_m.at(0).get(), (*part)->mass(), true);
+			vperpMuConvert(data.at(0).at(ind), &data.at(1).at(ind), data.at(2).at(ind), data.at(4).at(ind), BFieldModel_m.get(), (*part)->mass(), true);
 		}
 	}
 
@@ -56,13 +58,13 @@ void Simulation::__iterateSimCPU(size_t numberOfIterations, size_t checkDoneEver
 		if (cudaloopind % checkDoneEvery == 0) { done = true; }
 		for (auto part = particles_m.begin(); part < particles_m.end(); part++)
 		{
-			vector<vector<float>>& data = (*part)->__data(false); //get a reference to the particle's curr data array-
+			fp2Dvec& data = (*part)->__data(false); //get a reference to the particle's curr data array-
 
 			#pragma omp parallel for
 			for (int ind = 0; ind < static_cast<int>((*part)->getNumberOfParticles()); ind++)
 			{
 				iterateParticle(&data.at(0).at(ind), &data.at(1).at(ind), &data.at(2).at(ind), &data.at(3).at(ind), &data.at(4).at(ind),
-					BFieldModel_m.at(0).get(), EFieldModel_m.at(0).get(), simTime_m, dt_m, (*part)->mass(), (*part)->charge(), simMin_m, simMax_m);
+					BFieldModel_m.get(), EFieldModel_m.get(), simTime_m, dt_m, (*part)->mass(), (*part)->charge(), simMin_m, simMax_m);
 				if ((cudaloopind % checkDoneEvery == 0) && done && (data.at(4).at(ind) < 0.0f))
 				{
 					//#pragma omp atomic
@@ -72,8 +74,8 @@ void Simulation::__iterateSimCPU(size_t numberOfIterations, size_t checkDoneEver
 			}
 		}
 
-		for (auto& sat : satPartPairs_m)
-			(*sat).satellite->iterateDetectorCPU((*sat).particle->data(false), simTime_m, dt_m);
+		for (auto& sat : satellites_m)  //TODO: if multiple particles added, need to loop over particles
+			sat->iterateDetectorCPU(particles_m.at(0)->data(false), simTime_m, dt_m);
 
 		if (cudaloopind % checkDoneEvery == 0)
 		{
@@ -101,10 +103,10 @@ void Simulation::__iterateSimCPU(size_t numberOfIterations, size_t checkDoneEver
 
 	for (auto part = particles_m.begin(); part < particles_m.end(); part++)
 	{
-		vector<vector<float>> tmp{ (*part)->data(false) };
+		fp2Dvec tmp{ (*part)->data(false) };
 		for (size_t ind = 0; ind < (*part)->getNumberOfParticles(); ind++)
 		{//convert mu to vperp in Particles memory
-			vperpMuConvert(tmp.at(0).at(ind), &tmp.at(1).at(ind), tmp.at(2).at(ind), tmp.at(4).at(ind), BFieldModel_m.at(0).get(), (*part)->mass(), false);
+			vperpMuConvert(tmp.at(0).at(ind), &tmp.at(1).at(ind), tmp.at(2).at(ind), tmp.at(4).at(ind), BFieldModel_m.get(), (*part)->mass(), false);
 		}
 		(*part)->loadDataFromMem(tmp, false);
 	}
@@ -116,4 +118,5 @@ void Simulation::__iterateSimCPU(size_t numberOfIterations, size_t checkDoneEver
 	std::cout << "Total sim time: " << Log_m->timeElapsedTotal_s() << " s" << std::endl;
 
 	Log_m->createEntry("End Iteration of Sim:  " + std::to_string(numberOfIterations));
+	*/
 }

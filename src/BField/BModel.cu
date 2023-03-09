@@ -1,21 +1,28 @@
 #include "BField/BModel.h"
+#include "utils/arrayUtilsGPU.h"
 #include <stdexcept>
 
 using std::runtime_error;
 
 __host__ __device__ BModel::BModel(Type type) : type_m{ type }
 {
-
+    #ifndef __CUDA_ARCH__
+    this_d.resize(utils::GPU::getDeviceCount());
+    #endif
 }
-#include <iostream>
+
 __host__ __device__ BModel::~BModel()
 {
 
 }
 
-__host__ BModel** BModel::this_dev() const
+__host__ BModel** BModel::this_dev(int GPUind) const
 {
+    #ifndef __CUDA_ARCH__
+    return this_d.at(GPUind);
+    #else
     return this_d;
+    #endif
 }
 
 __host__ string BModel::name() const

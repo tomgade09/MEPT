@@ -1,9 +1,9 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio Version 16
-VisualStudioVersion = 16.0.29409.12
+# Visual Studio Version 17
+VisualStudioVersion = 17.4.33213.308
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "PTEM", "PTEM.vcxproj", "{F99C52E6-751A-42DA-8861-2CF5BBEB9E5D}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "MEPT", "MEPT.vcxproj", "{F99C52E6-751A-42DA-8861-2CF5BBEB9E5D}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -17,6 +17,6 @@ Global
 		HideSolutionNode = FALSE
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
-		SolutionGuid = {7E6D9F98-D3C9-41D2-9A63-9945D87C420F}
+		SolutionGuid = {189AF428-0DDB-4CB3-9B5E-1B8398016032}
 	EndGlobalSection
 EndGlobal

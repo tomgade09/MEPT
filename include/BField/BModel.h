@@ -23,7 +23,11 @@ public:
 	};
 
 protected:
-	BModel** this_d{ nullptr }; //pointer to device-side instance
+	#ifndef __CUDA_ARCH__
+	vector<BModel**> this_d; //pointer to device-side instance
+	#else
+	BModel** this_d{ nullptr };
+	#endif
 
 	Type type_m{ Type::Other };
 
@@ -38,16 +42,16 @@ public:
 	__host__ __device__ BModel(const BModel&) = delete;
 
 	__host__ __device__ virtual tesla  getBFieldAtS(const meters s, const seconds t) const = 0;
-	__host__ __device__ virtual float getGradBAtS (const meters s, const seconds t) const = 0;
+	__host__ __device__ virtual flPt_t getGradBAtS (const meters s, const seconds t) const = 0;
 	__host__ __device__ virtual meters getSAtAlt(const meters alt_fromRe) const = 0;
 
 	__host__            virtual meters ILAT() const = 0;
 
-	__host__            BModel** this_dev() const; //once returned, have to cast it to the appropriate type
+	__host__            BModel** this_dev(int GPUind) const; //once returned, have to cast it to the appropriate type
 	__host__            string name() const;
 	__host__            Type   type() const;
 
-	__host__            virtual vector<float> getAllAttributes() const = 0;
+	__host__            virtual vector<flPt_t> getAllAttributes() const = 0;
 	__host__            virtual void serialize(ofstream& out) const = 0;
 };
 

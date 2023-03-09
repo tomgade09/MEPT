@@ -15,8 +15,6 @@ using std::vector;
 using std::unique_ptr;
 using std::logic_error;
 
-#define STRVEC vector<string>
-
 namespace utils
 {
 	namespace fileIO
@@ -26,8 +24,8 @@ namespace utils
 		private:
 			string filename_m;
 			
-			vector<vector<float>> data_m;
-			STRVEC labels_m;
+			fp2Dvec data_m;
+			strvec labels_m;
 			bool write_m{ true };
 
 			void write(); //defined in cpp
@@ -36,12 +34,12 @@ namespace utils
 			CSV(string filename);
 			~CSV();
 
-			void add(vector<float> vec, string label);
-			void add(vector<vector<float>> vecs, vector<string> labels);
+			void add(fp1Dvec vec, string label);
+			void add(fp2Dvec vecs, strvec labels);
 			void addspace();
 			void dontwrite();
 
-			vector<vector<float>>& data();
+			fp2Dvec& data();
 		};
 
 		class ParticleDistribution
@@ -51,18 +49,18 @@ namespace utils
 
 		protected:
 			string saveFolder_m;
-			STRVEC attrNames_m;
+			strvec attrNames_m;
 			string particleName_m;
 			bool   write_m{ true }; //set to false if deserialized, used to prevent overwriting a valid file
-			float mass_m{ -1.0f };
+			kg     mass_m{ -1.0f };
 
 			vector<Range>  ranges_m;
-			vector<float> padvals_m; //pad values for each attribute (usually 0.0 or -1.0)
+			fp1Dvec        padvals_m; //pad values for each attribute (usually 0.0 or -1.0)
 
 			void deserialize(string serialFolder, string name);
 
 		public: //generate is dependent on vpara, vperp, and s being the first three attributes - if not, this will have to be modified
-			ParticleDistribution(string saveFolder, vector<string> attrNames = { "vpara", "vperp", "s", "t_inc", "t_esc" }, string particleName = "elec", float mass = MASS_ELECTRON, vector<float> padvals = { 0.0f, 0.0f, 0.0f, 0.0f, -1.0f}, bool write = true);
+			ParticleDistribution(string saveFolder, strvec attrNames = { "vpara", "vperp", "s", "t_inc", "t_esc" }, string particleName = "elec", kg mass = MASS_ELECTRON, fp1Dvec padvals = { 0.0f, 0.0f, 0.0f, 0.0f, -1.0f}, bool write = true);
 			ParticleDistribution(string serialFolder, string name);
 			ParticleDistribution(const ParticleDistribution& PD);
 			~ParticleDistribution(); //writes on destruction
@@ -70,21 +68,19 @@ namespace utils
 			void   printRanges() const;
 			const vector<Range>& ranges() const;
 			string saveFolder() const;
-			STRVEC attrNames() const;
+			strvec attrNames() const;
 			string particleName() const;
-			float mass() const;
+			kg     mass() const;
 
-			void addEnergyRange(size_t energyBins, eV E_start, eV E_end, bool logE = true);
-			void addPitchRange(size_t pitchBins, degrees PA_start, degrees PA_end, bool midBin = true);
-			vector<vector<float>> generate(meters s_ion, meters s_mag) const;
-			vector<vector<float>> generate(vector<meters>& s) const;
-			void write(meters s_ion, meters s_mag) const;
-			void write(vector<meters>& s) const;
-			void serialize() const;
+			void    addEnergyRange(size_t energyBins, eV E_start, eV E_end, bool logE = true);
+			void    addPitchRange(size_t pitchBins, degrees PA_start, degrees PA_end, bool midBin = true);
+			fp2Dvec generate(meters s_ion, meters s_mag) const;
+			fp2Dvec generate(vector<meters>& s) const;
+			void    write(meters s_ion, meters s_mag) const;
+			void    write(vector<meters>& s) const;
+			void    serialize() const;
 		};
 	}
 }
-
-#undef STRVEC
 
 #endif /* !UTILS_IOCLASSES_WRITE_H */

@@ -1,4 +1,5 @@
 #include <string>
+#include <filesystem>
 #include "Simulation/Simulation.h"
 
 
@@ -6,24 +7,27 @@ int main(int argc, char* argv[])
 {
 	//Simulation characteristics - can be changed, but this is
 	//the sample problem that we are testing speedup against
-	float dt{ 0.001f };                      //time step size delta t
-	float simmin{ 628565.8510817f };         //minimum altitude of the sim - when particle goes <, it's not tracked any more
-	float simmax{ 19881647.2473464f };       //maximum altitude of the sim
+	seconds dt{ 0.001 };                     //time step size delta t
+	meters  simmin{ 628565.8510817 };        //minimum altitude of the sim - when particle goes <, it's not tracked any more
+	meters  simmax{ 19881647.2473464 };      //maximum altitude of the sim
 	int numiter{ 50000 };                    //number of timesteps we do for each particle
 	int numParts{ 3456000 };                 //number of particles in our simulation
 	
 	//create an instance of the container class that holds the entire PTEM simulation
-	Simulation sim{ dt, simmin, simmax };
+	string currpath{ std::filesystem::current_path().string() };
+	size_t binloc{ currpath.size() - currpath.find("bin") };
+	if (binloc <= 5) currpath += "/..";  //if we are in the "bin" folder, add a ".." to take us to the root
+	Simulation sim{ dt, simmin, simmax, currpath };
 	
 	//set the BField model we will use - here this is a dipole representation (hence, "DipoleB") of the
 	//Earth's magnetic ("B") field stored in a lookup table ("LUT") with 1000000 entries (last parameter)
 	//evenly spaced from simmin to simmax (see above variables) - so the BField is a Dipole B Lookup Table
 	//We use a lookup table because it is much faster to use this than to calculate the field each time we
 	//update 3.5 million particles positions.
-	sim.setBFieldModel("DipoleBLUT", { 72.0f, 637.12f, 1000000 });
+	sim.setBFieldModel("DipoleBLUT", { 72.0, 637.12, 1000000 });
 	
 	//no E Fields are used yet, although they could be specified as below
-	//sim.addEFieldModel("QSPS", { 6556500.0f, 9556500.0f, 0.04f }); //{ 3185500.0f, 6185500.0f, 0.02f });// { 6556500.0f, 9556500.0f, 0.04f});
+	//sim.addEFieldModel("QSPS", { 6556500.0, 9556500.0, 0.04 }); //{ 3185500.0, 6185500.0, 0.02 });// { 6556500.0, 9556500.0, 0.04 });
 
 	//create a container for the particles that we will generate
 	//first argument is the name of the particle, second is the mass, third is the electric charge, and fourth
@@ -33,7 +37,7 @@ int main(int argc, char* argv[])
 	//create a distribution of particles and load the data into the Particles class, log distribution attributes
 	//you shouldn't have to do anything with this class / functionality
 	ParticleDistribution pd{ "./", sim.particles(0)->attributeNames(), sim.particles(0)->name(),
-		sim.particles(0)->mass(), { 0.0f, 0.0f, 0.0f, 0.0f, -1.0f }, false };
+		sim.particles(0)->mass(), { 0.0, 0.0, 0.0, 0.0, -1.0 }, false };
 
 	sim.getLog()->createEntry("Created Particle Distribution:");
 	sim.getLog()->createEntry("     Energy: " + std::to_string(96) + " E bins, " + std::to_string(0.5) + " - " + std::to_string(4.5) + " logE");
@@ -49,10 +53,10 @@ int main(int argc, char* argv[])
 	//so the index is 0; second argument is the altitude of the satellite; third is whether or not the
 	//"detector" is facing upward (if not, it's facing downward) - this determines whether the satellite
 	//detects upgoing or downgoing particles, and fourth is the name of the satellite
-	sim.createTempSat(0, simmin, true, "btmElec");
-	sim.createTempSat(0, simmax, false, "topElec");
-	sim.createTempSat(0, 4071307.04106411f, false, "4e6ElecUpg");
-	sim.createTempSat(0, 4071307.04106411f, true, "4e6ElecDng");
+	sim.createSatellite(simmin, true, "btmElec", numParts);
+	sim.createSatellite(simmax, false, "topElec", numParts);
+	sim.createSatellite(4071307.04106411, false, "4e6ElecUpg", numParts);
+	sim.createSatellite(4071307.04106411, true, "4e6ElecDng", numParts);
 	
 	//create a log entry detailing what we've done so far
 	sim.getLog()->createEntry("main: Simulation setup complete");

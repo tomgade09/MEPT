@@ -57,16 +57,16 @@ namespace utils
 			return ret;
 		}
 
-		DLLEXP vector<float> strToFltVec(string str, const char delim) //delim defaults to ','
-		{
-			vector<string> strVec{ strToStrVec(str, delim) };
-			vector<float> ret;
+		DLLEXP fp1Dvec strToFPVec(string str, const char delim) //delim defaults to ','
+		{   //assumes double precision through atof
+			strvec strVec{ strToStrVec(str, delim) };
+			fp1Dvec ret;
 
 			if (strVec.size() == 0)
 				return ret;
 
 			for (size_t ind = 0; ind < strVec.size(); ind++)
-				ret.push_back(atof(strVec.at(ind).c_str()));
+				ret.push_back((flPt_t)atof(strVec.at(ind).c_str()));
 
 			return ret;
 		}

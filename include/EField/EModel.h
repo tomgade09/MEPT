@@ -30,7 +30,11 @@ public:
 	Type type_m{ Type::Other };
 
 protected:
-	EModel** this_d{ nullptr }; //not really used on device
+	#ifndef __CUDA_ARCH__
+	vector<EModel**> this_d; //not really used on device
+	#else
+	EModel** this_d{ nullptr };
+	#endif
 
 	__host__            virtual void setupEnvironment() = 0; //define this function in derived classes to assign a pointer to that function's B Field code to the location indicated by BModelFcnPtr_d and gradBFcnPtr_d
 	__host__            virtual void deleteEnvironment() = 0;
@@ -46,10 +50,10 @@ public:
 
 	__host__ __device__ virtual Vperm getEFieldAtS(const meters s, const seconds t) const = 0;
 
-	__host__            EModel** this_dev() const;
+	__host__            EModel** this_dev(int GPUind) const;
 	__host__            string name() const;
 
-	__host__            virtual vector<float> getAllAttributes() const = 0;
+	__host__            virtual vector<flPt_t> getAllAttributes() const = 0;
 	__host__            virtual void serialize(ofstream& out) const = 0;
 };
 

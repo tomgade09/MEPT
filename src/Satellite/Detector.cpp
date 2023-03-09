@@ -6,7 +6,7 @@
 
 using std::runtime_error;
 
-void Satellite::iterateDetectorCPU(const vector<vector<float>>& particleData, seconds simtime, seconds dt)
+void Satellite::iterateDetectorCPU(const fp2Dvec& particleData, seconds simtime, seconds dt)
 {
 	if (data_m.at(0).size() != particleData.at(0).size())
 		throw runtime_error("Satellite::iterateDetectorCPU: data_m is improperly formed for Satellite named " + name_m);
@@ -23,7 +23,7 @@ void Satellite::iterateDetectorCPU(const vector<vector<float>>& particleData, se
 		if (data_m.at(3).at(partind) > -0.1f)
 			continue;
 
-		float s_minus_vdt{ particleData.at(2).at(partind) - particleData.at(0).at(partind) * dt };
+		meters s_minus_vdt{ particleData.at(2).at(partind) - particleData.at(0).at(partind) * dt };
 
 		if (
 			//(detected.at(3).at(partind) < -0.1f) &&
@@ -36,7 +36,7 @@ void Satellite::iterateDetectorCPU(const vector<vector<float>>& particleData, se
 			data_m.at(1).at(partind) = particleData.at(1).at(partind); //mu
 			data_m.at(2).at(partind) = particleData.at(2).at(partind); //s
 			data_m.at(3).at(partind) = simtime;                        //t_esc
-			data_m.at(4).at(partind) = (float)partind;                //index
+			data_m.at(4).at(partind) = (flPt_t)partind;                //index
 		}
 	}
 }
