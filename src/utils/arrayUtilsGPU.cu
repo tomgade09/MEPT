@@ -35,7 +35,7 @@ namespace utils
 			int dnumInt{ static_cast<int>(devNum) };
 			
 			if (dnumInt >= numdevs || dnumInt < 0)
-				cerr << "Invalid device number " << dnumInt << ".  Number of devices " << numdevs << ".  Using default device.";
+				cerr << "Invalid device number " << dnumInt << ".  Number of devices " << numdevs << ".  Using default device.\n";
 			else if (activedev != dnumInt)
 				CUDA_API_ERRCHK(cudaSetDevice(dnumInt));
 		}

@@ -331,7 +331,7 @@ void Satellite::deserialize(ifstream& in)
 		}
 		catch (std::exception& e)
 		{
-			std::cerr << e.what();
+			std::cerr << e.what() << "\n";
 			throw;
 		}
 	}

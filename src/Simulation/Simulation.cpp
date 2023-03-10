@@ -409,7 +409,7 @@ void Simulation::saveDataToDisk()
 void Simulation::loadDataFromDisk()
 {
 	if (initialized_m)
-		cerr << "Simulation::loadDataFromDisk: simulation initialized.  Loading data at this point may result in unexpected behavior";
+		cerr << "Simulation::loadDataFromDisk: simulation initialized.  Loading data at this point may result in unexpected behavior\n";
 
 	LOOP_OVER_1D_ARRAY(getNumberOfParticleTypes(), particles_m.at(iii)->loadDataFromDisk(saveRootDir_m + "bins/particles_init/", true));
 	LOOP_OVER_1D_ARRAY(getNumberOfParticleTypes(), particles_m.at(iii)->loadDataFromDisk(saveRootDir_m + "bins/particles_final/", false));
@@ -436,7 +436,7 @@ void Simulation::saveSimulation() const
 
 	if (std::filesystem::exists(filename))
 	{
-		cerr << __func__ << ": Warning: filename exists: " << filename << " Returning without saving.";
+		cerr << __func__ << ": Warning: filename exists: " << filename << " Returning without saving.\n";
 		return;
 	}
 

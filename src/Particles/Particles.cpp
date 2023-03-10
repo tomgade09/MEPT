@@ -65,7 +65,7 @@ void Particles::initializeGPU()
 			particleCountPerGPU_m.at(i), i);
 
 		clog << "Particles::initializeGPU() : setup2DArray GPU num " + to_string(i) +
-			    ": num particles " + to_string(particleCountPerGPU_m.at(i));
+			    ": num particles " + to_string(particleCountPerGPU_m.at(i)) << "\n";
 	}
 	initializedGPU_m = true;
 }
@@ -107,7 +107,7 @@ void Particles::copyDataToGPU(bool currToGPU)
 		}
 
 		clog << "Particles::copyDataToGPU() : copy2DArray GPU num " + to_string(dev) +
-			": start " + to_string(offset) + ": end " + to_string(end) + ": length " + to_string(subvec.at(0).size());
+			": start " + to_string(offset) + ": end " + to_string(end) + ": length " + to_string(subvec.at(0).size()) << "\n";
 		
 		offset = end;
 	}
@@ -258,7 +258,7 @@ void Particles::generateDist(size_t numEbins, eV E_min, eV E_max, size_t numPAbi
 {
 	std::clog << "Particles::generateDist(numEbins: " << to_string(numEbins) << ", E_min: " << E_min << ", E_max: "
 		<< E_max << ", numPAbins: " << numPAbins << ", PA_min: " << PA_min << ", PA_max: " << PA_max << ", s_ion: "
-		<< s_ion << ", s_mag: " << s_mag << ")";
+		<< s_ion << ", s_mag: " << s_mag << ")\n";
 
 	ParticleDistribution dist{ "./", attributeNames_m, name_m, mass_m, { 0.0f, 0.0f, 0.0f, 0.0f, -1.0f }, false };
 	dist.addEnergyRange(numEbins, E_min, E_max);   //defaults to log spaced bins, mid bin

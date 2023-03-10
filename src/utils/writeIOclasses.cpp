@@ -56,7 +56,7 @@ namespace utils
 			}
 			catch (exception& e)
 			{
-				cerr << "CSV::~CSV: " << e.what() << ". CSV did not write to disk";
+				cerr << "CSV::~CSV: " << e.what() << ". CSV did not write to disk\n";
 			}
 		}
 
@@ -361,7 +361,7 @@ namespace utils
 			}
 			catch (exception& e)
 			{
-				cerr << "ParticleDistribution::~ParticleDistribution: " << e.what() << ". PD partially or entirely not written to disk";
+				cerr << "ParticleDistribution::~ParticleDistribution: " << e.what() << ". PD partially or entirely not written to disk\n";
 			}
 		}
 

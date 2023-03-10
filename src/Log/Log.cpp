@@ -77,20 +77,52 @@ void Log::streamCheck()
 		{
 			if (stream.str().length() > 0)
 			{
-				size_t tmplen{ stream.str().length() };
+				size_t tmplen;
+				string msg;       //copy message to local variable
 
 				do
 				{
-					tmplen = stream.str().length();
 					std::this_thread::sleep_for(microseconds(10));
-				}
-				while (tmplen != stream.str().length()); //block until cerr is not being written to anymore
+					tmplen = stream.str().length();
+					msg = stream.str();
+				} while (tmplen != stream.str().length() || //spinlock until stream is not being written to anymore
+					     stream.str().back() != '\n');      //last char is not a line break
 
-				entries_m.push_back(Entry(steady_clock::now(), stream.str(), true, error));
-				stream.str(string());
+				stream.str(string());        //clear buffer
 				stream.clear();
 
-				writeReady_m.notify_one();
+				size_t beg{ 0 };
+				size_t end{ 0 };
+				size_t sz { 0 };
+				string tmp;
+
+				do
+				{
+					end = msg.find('\n', beg);
+					if (end > msg.size())
+						end = msg.size();
+					sz = end - 1 - beg;
+
+					tmp = msg.substr(beg, sz+1);
+					if (sz > 1 && tmp.back() != '\n')
+						sz += 1;
+					else if (sz != 0 && tmp.at(sz-1) == '\n')
+						sz -= 1;
+					
+					if (sz <= 1)
+					{
+						beg = end + 1;
+						continue;
+					}
+					
+
+					entries_m.push_back(Entry(steady_clock::now(), msg.substr(beg, sz), true, error));
+					writeReady_m.notify_one();
+
+					beg = end + 1;
+				} while (beg <= msg.length());
+
+				//entries_m.push_back(Entry(steady_clock::now(), stream.str(), true, error));
 			}
 		};
 

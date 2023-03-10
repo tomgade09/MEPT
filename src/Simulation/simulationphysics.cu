@@ -334,7 +334,7 @@ void Simulation::iterateSimulation(size_t numberOfIterations, size_t checkDoneEv
 			out << setw(to_string((int)(numberOfIterations)*dt_m).size()) << fixed << simTime_m;
 			loopStatus += out.str() + "  |  Real Time Elapsed (s): " + to_string(Log_m->timeElapsedSinceEntry_s(initEntry));
 
-			Log_m->createEntry(loopStatus);
+			clog << loopStatus << "\n";
 			cout << loopStatus << "\n";
 			
 			bool done{ true };
