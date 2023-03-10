@@ -10,11 +10,9 @@ ROOTDIR = os.path.abspath(PYROOTDIR + '/../')
 LIBDIR = os.path.abspath(ROOTDIR + '/lib/')
 
 if platform == "win32":
-    DLLLOCATION = os.path.abspath(LIBDIR + '/C-ADPIC-PTEM.dll')
+    DLLLOCATION = os.path.abspath(LIBDIR + '/MEPT.dll')
 elif platform == "linux" or platform == "linux2":
-    DLLLOCATION = os.path.abspath(LIBDIR + '/C-ADPIC-PTEM.so')
-elif platform == "darwin":
-    DLLLOCATION = os.path.abspath(LIBDIR + '/C-ADPIC-PTEM.dylib') #not tested, but probably would work through makefile
+    DLLLOCATION = os.path.abspath(LIBDIR + '/MEPT.so')
 
 #Physical Constants
 RADIUS_EARTH = 6.3712e6

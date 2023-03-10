@@ -4,7 +4,7 @@
 #include <vector>
 #include <string>
 
-#define USE_DP_FLTPT
+//#define USE_SP_FLTPT
 
 #ifdef USE_SP_FLTPT
 typedef float flPt_t;                      //floating point type (can select float or double at compile time)

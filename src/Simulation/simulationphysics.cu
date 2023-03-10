@@ -79,43 +79,49 @@ namespace physics
 		}
 	}
 
-	__device__ __host__ mpers2 accel1dCUDA(const mpers vs_RK, const seconds t_RK, const flPt_t* args, BModel* bmodel, EField* efield) //made to pass into 1D Fourth Order Runge Kutta code
-	{//args array: [s_0, mu, q, m, simtime]
-		flPt_t F_lor, F_mir, stmp;
-		stmp = args[0] + vs_RK * t_RK; //ps_0 + vs_RK * t_RK
+	__device__ __host__ mpers2 accelEOM(const meters s_step, const seconds t_step, const flPt_t* args, BModel* bmodel, EField* efield) //made to pass into 1D Fourth Order Runge Kutta code
+	{   //s_step, t_step, args are based on the overall position, and total time from the start of the simulation
+		//args array: [s_0, mu, q, m, simtime]
+		flPt_t F_lor, F_mir;
 
 		//Mirror force
-		F_mir = -args[1] * bmodel->getGradBAtS(stmp, t_RK + args[4]); //-mu * gradB(pos, runge-kutta time + simtime)
+		F_mir = -args[1] * bmodel->getGradBAtS(s_step, t_step); //-mu * gradB(pos, runge-kutta time + simtime)
 
 		//Lorentz force - simply qE - v x B is taken care of by mu - results in kg.m/s^2 - to convert to Re equivalent - divide by Re
-		F_lor = args[2] * efield->getEFieldAtS(stmp, t_RK + args[4]); //q * EFieldatS
+		F_lor = args[2] * efield->getEFieldAtS(s_step, t_step); //q * EFieldatS
 
 		return (F_lor + F_mir) / args[3];
 	}//returns an acceleration in the parallel direction to the B Field
 
-	__device__ __host__ flPt_t RungeKutta4CUDA(const flPt_t y_0, const flPt_t h, const flPt_t* funcArg, BModel* bmodel, EField* efield)
-	{
-		// dy / dt = f(t, y), y(t_0) = y_0
+	__device__ __host__ void RK4_2ndOrd_ODE(const flPt_t s0, const flPt_t v0, const flPt_t t0, const flPt_t dt, const flPt_t* funcArgs, BModel* bmodel, EField* efield, flPt_t& sout, flPt_t& vout)
+	{   // Referenced: https://www.compadre.org/PICUP/resources/Numerical-Integration/
+		// Solves coupled system of ODEs:
+		// ds / dt = v
+		// dv / dt = F(s,v,t)/m, where F(s,v,t)/m is given by "accelEOM"
 		// funcArgs are whatever you need to pass to the equation
 		// args array: [s_0, mu, q, m, simtime]
-		flPt_t k1, k2, k3, k4;
-		flPt_t y{ y_0 };
-		flPt_t t_RK{ 0.0 };
+		flPt_t k1v, k2v, k3v, k4v;  //k update values are in units of the value (so kNv is in units of v, etc)
+		flPt_t k1s, k2s, k3s, k4s;
+
+		auto eom = [&](flPt_t s_step, flPt_t t_step)
+		{
+			return accelEOM(s_step, t_step, funcArgs, bmodel, efield);
+		};
 		
-		k1 = accel1dCUDA(y, t_RK, funcArg, bmodel, efield); //k1 = f(t_n, y_n), returns units of dy / dt
+		k1v = eom(s0, t0) * dt;                        //k1 = f(t, s), returns units of s
+		k1s = v0 * dt;
 
-		t_RK = h / 2;
-		y = y_0 + k1 * t_RK;
-		k2 = accel1dCUDA(y, t_RK, funcArg, bmodel, efield); //k2 = f(t_n + h/2, y_n + h/2 * k1)
+		k2v = eom(s0 + k1s/2.0, t0 + dt/2.0) * dt;     //k2 = f(t_n + h/2, s_n + h/2 * k1)
+		k2s = (v0 + k1v/2.0) * dt;
 
-		y = y_0 + k2 * t_RK;
-		k3 = accel1dCUDA(y, t_RK, funcArg, bmodel, efield); //k3 = f(t_n + h/2, y_n + h/2 * k2)
+		k3v = eom(s0 + k2s/2.0, t0 + dt/2.0) * dt;     //k3 = f(t_n + h/2, s_n + h/2 * k2)
+		k3s = (v0 + k2v/2.0) * dt;
 
-		t_RK = h;
-		y = y_0 + k3 * t_RK;
-		k4 = accel1dCUDA(y, t_RK, funcArg, bmodel, efield); //k4 = f(t_n + h, y_n + h k3)
+		k4v = eom(s0 + k3s, t0 + dt) * dt;             //k4 = f(t_n + h, s_n + h k3)
+		k4s = (v0 + k3v) * dt;
 
-		return (k1 + 2.0 * k2 + 2.0 * k3 + k4) * h / 6.0; //returns delta y, not dy / dt, not total y
+		sout = s0 + 1.0/6.0 * (k1s + 2.0*k2s + 2.0*k3s + k4s);
+		vout = v0 + 1.0/6.0 * (k1v + 2.0*k2v + 2.0*k3v + k4v);
 	}
 
 	__global__ void simActiveCheck(flPt_t** currData_d, bool* simDone, int len)
@@ -161,24 +167,19 @@ namespace physics
 		else if (t_inc > simtime) //particle hasn't "entered the sim" yet
 			return;
 		
-		mpers  v{ currData_d[0][idx] };
-		meters s{ currData_d[2][idx] };
+		mpers  v0{ currData_d[0][idx] };
+		meters s0{ currData_d[2][idx] };
 
 		//args array: [ps_0, mu, q, m, simtime]
-		const flPt_t args[]{ s, currData_d[1][idx], charge, mass, simtime };
+		const flPt_t args[]{ s0, currData_d[1][idx], charge, mass, simtime };
 
-		//RK4 (plus v0 in this case) gives v at the next time step (indicated vf in this note):
-		//for downgoing (as an example), due to the mirror force, vf will be lower than v0 as the mirror force is acting in the opposite direction as v
-		//along the path of the particle, ds, and so s will end up higher if we use ds = (vf * dt) than where it would realistically
-		//if we use the ds = (v0 * dt), s will be lower down than where it would end up really (due to the fact that the mirror force acting along ds
-		//will slow v down as the particle travels along ds), so I take the average of the two and it seems close enough s = (v0 + (v0 + dv)) / 2 * dt = v0 + dv/2 * dt
-		//hence the /2 factor below - FYI, this was checked by the particle's energy (steady state, no E Field) remaining the same throughout the simulation
+		//update particle position and velocity with RK4 solving coupled system of ODEs
+		//RK4_2ndOrd_ODE(const flPt_t s0, const flPt_t v0, const flPt_t t0, const flPt_t dt, const flPt_t* funcArgs, BModel* bmodel, EField* efield, flPt_t& sout, flPt_t& vout)
 		
-		meters s0{ s };
-		mpers  v0{ v };
-		v += RungeKutta4CUDA(v, dt, args, *bmodel, efield);
-		s += (v + v0) / 2 * dt; //s
-		currData_d[0][idx] = v; //v
+		mpers v;
+		meters s;
+		RK4_2ndOrd_ODE(s0, v0, simtime, dt, args, *bmodel, efield, s, v);
+		currData_d[0][idx] = v;
 		currData_d[2][idx] = s;
 
 		for (int sat = 0; sat < numsats; sat++)  //no divergence here - number of satellites is set before sim start
@@ -209,9 +210,7 @@ namespace physics
 
 		const flPt_t args[]{ *s, *mu, charge, mass, simtime };
 
-		mpers v_orig{ *vpara };
-		*vpara += RungeKutta4CUDA(*vpara, dt, args, bmodel, efield);
-		*s += (*vpara + v_orig) / 2.0f * dt;
+		RK4_2ndOrd_ODE(args[0], *vpara, simtime, dt, args, bmodel, efield, *s, *vpara);
 	}
 }
 

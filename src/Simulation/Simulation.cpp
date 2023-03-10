@@ -76,6 +76,8 @@ Simulation::Simulation(seconds dt, meters simMin, meters simMax, string rootdir)
 
 	saveRootDir_m = dataout.str();
 	Log_m = make_unique<Log>(saveRootDir_m + "simulation.log");
+	Log_m->createEntry(string("Simulation FP precision: ") + ((sizeof(flPt_t) == 8) ? "double precision floating point" :
+		                                                                              "single precision floating point"));
 	
 	// Setup GPU Information ( number of devices and compute capability of each device )
 	setupGPU();
@@ -105,6 +107,8 @@ void Simulation::printSimAttributes(size_t numberOfIterations, size_t itersBtwCo
 	cout << "GPU(s) In Use:  " << utils::GPU::getDeviceNames() << endl;
 	cout << "Sim between:    " << simMin_m << "m - " << simMax_m << "m" << endl;
 	cout << "dt:             " << dt_m << "s" << endl;
+	cout << "FlPt Precision: " << ((sizeof(flPt_t) == 4) ? "single precision floating point (float)" :
+		                                                   "double precision floating point (double)") << endl;
 	cout << "BModel Model:   " << BFieldModel_m->name() << endl;
 	cout << "EField Elems:   " << ((Efield()->qspsCount() > 0) ? "QSPS" : "") << endl;
 	cout << "Particles:      ";

@@ -3,8 +3,9 @@
 dataroot  = "../_dataout/230308_11.34.31.fastmath";
 dataroot2 = "../_dataout/230308_13.12.13.nofastmath";
 dataroot  = "../_dataout/230309_16.51.44.substantial_changes";
-dataroot2 = "../_dataout/230309_17.06.12.doubles";
-dataroot  = "../_dataout/230309_17
+dataroot2 = "../_dataout/230309_18.51.33";
+%dataroot2 = "../_dataout/230309_17.06.12.doubles";
+%dataroot  = "../_dataout/230309_18.45.10.dbl.O2.RK4";
 
 
 ILAT = 72.0;
@@ -16,8 +17,10 @@ B_ion = getBFieldAtS(s_ion);
 B_sat = getBFieldAtS(s_sat);
 B_mag = getBFieldAtS(s_mag);
 
+%make sure the 'float' or 'double' option matches the datatype output by the simulation
+%or you will get errors
 bins_fm = loaddatafold(dataroot,'float');
-bins_no = loaddatafold(dataroot2,'double');
+bins_no = loaddatafold(dataroot2,'float');
 
 
 [E_fm_max_err, PA_fm_max_err, E_fm_RMSE, PA_fm_RMSE, E_fm_min_err, PA_fm_min_err] = ...

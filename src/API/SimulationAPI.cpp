@@ -71,9 +71,9 @@ DLLEXP_EXTC void setupExampleSimulationAPI(Sim* sim, int numParts, const char* l
 	sim->getLog()->createEntry("     Pitch2: " + std::to_string(numParts / (96 * 2)) + " E bins, " + std::to_string(16) + " - " + std::to_string(0) + " deg");
 	
 	pd.addEnergyRange(96, 0.5, 4.5);
-	pd.addPitchRange(numParts / (96 * 2), 180.0, 90.0);
-	pd.addPitchRange(numParts / (96 * 2), 16.0, 0.0);
-	//pd.addPitchRange(36000, 180.0, 0.0);
+	//pd.addPitchRange(numParts / (96 * 2), 180.0, 90.0);
+	//pd.addPitchRange(numParts / (96 * 2), 16.0, 0.0);
+	pd.addPitchRange(36000, 0.0f, 180.0f);
 
 	sim->particles(0)->loadDistFromPD(pd, sim->simMin(), sim->simMax());
 	//); /* SIM_API_EXCEP_CHECK() */
