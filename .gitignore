@@ -64,6 +64,7 @@ x64/
 .vscode/
 bin/
 lib/
+tools/
 _*/
 # utils/BinToCDF/
 .idea/

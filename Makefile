@@ -6,14 +6,14 @@ NVCFLAGS   := -std=c++14 -ccbin=$(CC) -rdc=true -O2 -gencode=arch=compute_50,cod
 LINKFLAGS  := -lcudadevrt -Xcompiler "-fopenmp"
 
 # Build-essential directories and defines
-CUDAINC    := /usr/local/cuda-11.1/include
-CUDALIB    := /usr/local/cuda-11.1/lib64
+CUDAINC    := /usr/local/cuda-12.1/include
+CUDALIB    := /usr/local/cuda-12.1/lib64
 LIBS       := -L$(CUDALIB)
 INCS       := -I$(CUDAINC) -I./include
 SRC        := ./src
 OUT        := ./bin
 BUILD      := $(OUT)/build
-TARGET     := $(OUT)/PTEM
+TARGET     := $(OUT)/MEPT
 
 # Lists of files
 SOURCES    := $(shell find $(SRC) -name "*.cpp")# | sed 's/^\.\/src\/SimAttributes\/SimAttributes\.cpp//')
@@ -80,6 +80,15 @@ $(BUILD)/utils/strings.o: $(SRC)/utils/strings.cpp
 
 $(BUILD)/utils/writeIOclasses.o: $(SRC)/utils/writeIOclasses.cpp
 	$(CC) $(CXXFLAGS) -c $(INCS) $(LIBS) $(SRC)/utils/writeIOclasses.cpp -o $(BUILD)/utils/writeIOclasses.o
+
+$(BUILD)/API/utilsAPI.o: $(SRC)/API/utilsAPI.cpp
+	$(CC) $(CXXFLAGS) -c $(INCS) $(LIBS) $(SRC)/API/utilsAPI.cpp -o $(BUILD)/API/utilsAPI.o
+
+$(BUILD)/API/LogAPI.o: $(SRC)/API/LogAPI.cpp
+	$(CC) $(CXXFLAGS) -c $(INCS) $(LIBS) $(SRC)/API/LogAPI.cpp -o $(BUILD)/API/LogAPI.o
+
+$(BUILD)/API/SimulationAPI.o: $(SRC)/API/SimulationAPI.cpp
+	$(CC) $(CXXFLAGS) -c $(INCS) $(LIBS) $(SRC)/API/SimulationAPI.cpp -o $(BUILD)/API/SimulationAPI.o
 
 
 #CUDA Source Files
