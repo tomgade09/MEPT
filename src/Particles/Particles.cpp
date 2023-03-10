@@ -131,7 +131,7 @@ void Particles::copyDataToHost()
 			std::copy(subvec.at(i).begin(), subvec.at(i).end(), currData_m.at(i).begin() + offset);  //add data back at the appropriate location
 
 		clog << "Particles::copyDataToHost() : copy2DArray GPU num " + to_string(dev) +
-			": start " + to_string(offset) + ": end " + to_string(end) + ": length " + to_string(subvec.at(0).size());
+			": start " + to_string(offset) + ": end " + to_string(end) + ": length " + to_string(subvec.at(0).size()) << "\n";
 		
 		offset = end;
 	}

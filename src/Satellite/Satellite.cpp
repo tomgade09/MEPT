@@ -96,7 +96,7 @@ void Satellite::initializeGPU()
 			data_d.at(2), data_d.at(3)); //constructs a SatDataPtrs directly in memory
 		
 		clog << "Satellite::initializeGPU() : setup2DArray GPU num " + to_string(dev) +
-			    ": length " + to_string(particleCountPerGPU_m.at(dev));
+			    ": length " + to_string(particleCountPerGPU_m.at(dev)) << "\n";
 	}
 	initializedGPU_m = true;
 }

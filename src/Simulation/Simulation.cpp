@@ -9,6 +9,7 @@
 #include "ErrorHandling/simExceptionMacros.h"
 
 using std::cout;
+using std::clog;
 using std::cerr;
 using std::endl;
 using std::move;
@@ -101,34 +102,39 @@ Simulation::~Simulation()
 
 void Simulation::printSimAttributes(size_t numberOfIterations, size_t itersBtwCouts) //protected
 {
+	stringstream out;
+
 	//Sim Header (folder) printed from Python - move here eventually
-	cout << "===============================================================" << "\n";
-	cout << "Data Folder:    " << saveRootDir_m << "\n";
-	cout << "GPU(s) In Use:  " << utils::GPU::getDeviceNames() << endl;
-	cout << "Sim between:    " << simMin_m << "m - " << simMax_m << "m" << endl;
-	cout << "dt:             " << dt_m << "s" << endl;
-	cout << "FlPt Precision: " << ((sizeof(flPt_t) == 4) ? "single precision floating point (float)" :
-		                                                   "double precision floating point (double)") << endl;
-	cout << "BModel Model:   " << BFieldModel_m->name() << endl;
-	cout << "EField Elems:   " << ((Efield()->qspsCount() > 0) ? "QSPS" : "") << endl;
-	cout << "Particles:      ";
+	out << "===============================================================" << "\n";
+	out << "Data Folder:    " << saveRootDir_m << "\n";
+	out << "GPU(s) In Use:  " << utils::GPU::getDeviceNames() << endl;
+	out << "Sim between:    " << simMin_m << "m - " << simMax_m << "m" << endl;
+	out << "dt:             " << dt_m << "s" << endl;
+	out << "FlPt Precision: " << ((sizeof(flPt_t) == 4) ? "single precision floating point (float)" :
+	                                                      "double precision floating point (double)") << endl;
+	out << "BModel Model:   " << BFieldModel_m->name() << endl;
+	out << "EField Elems:   " << ((Efield()->qspsCount() > 0) ? "QSPS" : "") << endl;
+	out << "Particles:      ";
 	for (size_t iii = 0; iii < particles_m.size(); iii++)
 	{
-		cout << ((iii != 0) ? "                " : "") << particles_m.at(iii)->name()
-			 << ": #: " << particles_m.at(iii)->getNumberOfParticles() << ", loaded files?: "
-			 << (particles_m.at(iii)->getInitDataLoaded() ? "true" : "false") << std::endl;
+		out << ((iii != 0) ? "                " : "") << particles_m.at(iii)->name()
+		    << ": #: " << particles_m.at(iii)->getNumberOfParticles() << ", loaded files?: "
+			<< (particles_m.at(iii)->getInitDataLoaded() ? "true" : "false") << std::endl;
 	}
-	cout << "Satellites:     ";
+	out << "Satellites:     ";
 	for (int iii = 0; iii < getNumberOfSatellites(); iii++)
 	{
-		cout << ((iii != 0) ? "                " : "") << satellites_m.at(iii)->name()
-			 << ": alt: " << satellites_m.at(iii)->altitude() << " m, upward?: "
-			 << (satellites_m.at(iii)->upward() ? "true" : "false") << std::endl;
+		out << ((iii != 0) ? "                " : "") << satellites_m.at(iii)->name()
+			<< ": alt: " << satellites_m.at(iii)->altitude() << " m, upward?: "
+			<< (satellites_m.at(iii)->upward() ? "true" : "false") << std::endl;
 	}
-	cout << "Iterations:     " << numberOfIterations << endl;
-	cout << "Iters Btw Cout: " << itersBtwCouts << endl;
-	cout << "Time to setup:  " << Log_m->timeElapsedTotal_s() << " s" << endl;
-	cout << "===============================================================" << endl;
+	out << "Iterations:     " << numberOfIterations << endl;
+	out << "Iters Btw Cout: " << itersBtwCouts << endl;
+	out << "Time to setup:  " << Log_m->timeElapsedTotal_s() << " s" << endl;
+	out << "===============================================================" << endl;
+
+	cout << out.str(); //print this output
+	clog << out.str(); //log this output
 }
 
 void Simulation::incTime()
@@ -294,29 +300,6 @@ void Simulation::createParticlesType(string name, kg mass, coulomb charge, size_
 	if (loadFilesDir != "")
 		particles_m.back()->loadDataFromDisk(loadFilesDir);
 }
-
-/*void Simulation::createTempSat(string partName, meters altitude, bool upwardFacing, string name)
-{
-	for (size_t partInd = 0; partInd < particles_m.size(); partInd++)
-	{
-		if (particles(static_cast<int>(partInd))->name() == partName)
-		{
-			createTempSat(partInd, altitude, upwardFacing, name);
-			return;
-		}
-	}
-	throw invalid_argument("Simulation::createTempSat: no particle of name " + name);
-}
-
-void Simulation::createTempSat(size_t partInd, meters altitude, bool upwardFacing, string name)
-{//"Temp Sats" are necessary to ensure particles are created before their accompanying satellites
-	if (initialized_m)
-		throw runtime_error("Simulation::createTempSat: initializeSimulation has already been called, no satellite will be created of name " + name);
-	if (partInd >= particles_m.size())
-		throw out_of_range("Simulation::createTempSat: no particle at the specifed index " + to_string(partInd));
-
-	tempSats_m.push_back(make_unique<TempSat>(partInd, altitude, upwardFacing, name));
-}*/
 
 void Simulation::createSatellite(meters altitude, bool upwardFacing, string name, size_t totalParticleCount)
 {
